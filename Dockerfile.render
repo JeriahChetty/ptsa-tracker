@@ -26,4 +26,4 @@ RUN python -c "from app import create_app; from app.extensions import db; from a
 EXPOSE 10000
 
 # Run application with Render's port
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 wsgi:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT --workers 2 --worker-class sync --timeout 120 --log-level info wsgi:app"]

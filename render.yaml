@@ -16,5 +16,4 @@ services:
         value: /app
       - key: PORT
         value: 10000
-    healthCheckPath: /
-    autoDeploy: true
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --worker-class sync --timeout 120 --log-level info wsgi:app
