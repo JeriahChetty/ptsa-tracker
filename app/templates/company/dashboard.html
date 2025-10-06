@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · PTSA Tracker{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="mb-0">Company Dashboard</h2>
+  <div>
+    <a href="{{ url_for('company.view_measures') }}" class="btn btn-primary">View All Measures</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Measures Summary Card -->
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">Measures Summary</h5>
+      </div>
+      <div class="card-body">
+        {% set total = assignments|length %}
+        {% set completed = assignments|selectattr('status', 'equalto', 'Completed')|list|length %}
+        {% set in_progress = assignments|selectattr('status', 'equalto', 'In Progress')|list|length %}
+        {% set not_started = assignments|selectattr('status', 'equalto', 'Not Started')|list|length %}
+        {% set needs_assistance = assignments|selectattr('status', 'equalto', 'Needs Assistance')|list|length %}
+
+        <div class="d-flex justify-content-center mb-3">
+          <div class="progress w-100 progress-measures" aria-label="Measures status breakdown">
+            {% if completed > 0 %}
+            {% set c = ((completed / (total or 1) * 100)|round(0, 'floor')|int) %}
+            <div class="progress-bar bg-success w-pct-{{ (c // 5) * 5 }}"
+                 title="Completed: {{ completed }} measures">
+              {{ completed }}
+            </div>
+            {% endif %}
+
+            {% if in_progress > 0 %}
+            {% set ip = ((in_progress / (total or 1) * 100)|round(0, 'floor')|int) %}
+            <div class="progress-bar bg-primary w-pct-{{ (ip // 5) * 5 }}"
+                 title="In Progress: {{ in_progress }} measures">
+              {{ in_progress }}
+            </div>
+            {% endif %}
+
+            {% if needs_assistance > 0 %}
+            {% set na = ((needs_assistance / (total or 1) * 100)|round(0, 'floor')|int) %}
+            <div class="progress-bar bg-danger w-pct-{{ (na // 5) * 5 }}"
+                 title="Needs Assistance: {{ needs_assistance }} measures">
+              {{ needs_assistance }}
+            </div>
+            {% endif %}
+
+            {% if not_started > 0 %}
+            {% set ns = ((not_started / (total or 1) * 100)|round(0, 'floor')|int) %}
+            <div class="progress-bar bg-secondary w-pct-{{ (ns // 5) * 5 }}"
+                 title="Not Started: {{ not_started }} measures">
+              {{ not_started }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="list-group">
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            Completed
+            <span class="badge bg-success rounded-pill">{{ completed }}</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            In Progress
+            <span class="badge bg-primary rounded-pill">{{ in_progress }}</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            Not Started
+            <span class="badge bg-secondary rounded-pill">{{ not_started }}</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            Needs Assistance
+            <span class="badge bg-danger rounded-pill">{{ needs_assistance }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('company.completed_measures') }}" class="btn btn-sm btn-outline-success">View Completed Measures</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications Card -->
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-info text-white">
+        <h5 class="card-title mb-0">Recent Notifications</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {% set overdue_assignments = assignments|selectattr('is_overdue')|list %}
+          {% set overdue_count = overdue_assignments|length %}
+          
+          {% if overdue_count > 0 %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div class="text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Overdue measures
+              </div>
+              <span class="badge bg-danger rounded-pill">{{ overdue_count }}</span>
+            </div>
+            
+            {# Show first few overdue measures #}
+            {% for assignment in overdue_assignments[:2] %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="me-auto">
+                  <div class="fw-bold text-danger">{{ assignment.measure.name }}</div>
+                  <small class="text-muted">Due: {{ assignment.due_at.strftime('%Y-%m-%d') if assignment.due_at else 'No date' }}</small>
+                </div>
+                <span class="badge bg-danger">Overdue</span>
+              </div>
+            </div>
+            {% endfor %}
+            
+            {% if overdue_count > 2 %}
+            <div class="list-group-item text-center">
+              <small class="text-muted">And {{ overdue_count - 2 }} more overdue...</small>
+            </div>
+            {% endif %}
+          {% else %}
+            <div class="list-group-item">
+              <div class="text-success">
+                <i class="fas fa-check-circle me-2"></i>
+                No overdue measures
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('company.notifications') }}" class="btn btn-sm btn-outline-info">View All Notifications</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Company Profile Card -->
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="card-title mb-0">Company Profile</h5>
+      </div>
+      <div class="card-body">
+        <p class="card-text"><strong>Name:</strong> {{ current_user.company.name if current_user.company else 'N/A' }}</p>
+        <p class="card-text"><strong>Region:</strong> {{ current_user.company.region if current_user.company else 'N/A' }}</p>
+        <p class="card-text"><strong>Industry:</strong> {{ current_user.company.industry_category if current_user.company else 'N/A' }}</p>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('company.company_profile') }}" class="btn btn-sm btn-outline-secondary">View Full Profile</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assigned Measures -->
+<div class="card mt-4">
+  <div class="card-header bg-dark text-white">
+    <h5 class="card-title mb-0">Your Assigned Measures</h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Measure</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          {% set done = assignment.steps|selectattr('is_completed')|list|length %}
+          {% set total = assignment.steps|length %}
+          {% set pct = ((done / total * 100)|round(0, 'floor')|int) if total else 0 %}
+          {% set pct5 = ((pct // 5) * 5)|int %}
+          {% set is_overdue = assignment.is_overdue %}
+          <tr>
+            <td>
+              <div>
+                {% for i in range(assignment.urgency|default(1, true)) %}
+                  <span class="text-warning">&#9670;</span>
+                {% endfor %}
+                <a href="{{ url_for('company.view_measure', measure_id=assignment.measure.id) }}">
+                  {{ assignment.measure.name }}
+                </a>
+              </div>
+              <small class="text-muted">{{ assignment.measure.measure_detail|truncate(60) if assignment.measure.measure_detail else '' }}</small>
+            </td>
+            <td>
+              <span class="badge bg-{{ status_class(assignment.status) }}">{{ assignment.status|default('Not Started') }}</span>
+              {% if is_overdue %}
+                <span class="badge bg-danger ms-1">Overdue</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="progress progress-dashboard" aria-label="Completion progress">
+                <div class="progress-bar bg-success w-pct-{{ pct5 }}"
+                     role="progressbar"
+                     data-valuenow="{{ pct }}"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     title="{{ done }}/{{ total }} step(s) complete">
+                  <span>{{ pct }}%</span>
+                </div>
+              </div>
+              <div class="small text-muted mt-1">{{ done }}/{{ total }} steps ({{ pct }}%)</div>
+            </td>
+            <td>
+              {% if assignment.due_at %}
+                {{ assignment.due_at.strftime('%Y-%m-%d') }}
+                <br>
+                <span data-countdown data-due-at="{{ assignment.due_at.isoformat() }}"></span>
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <a href="{{ url_for('company.view_measure', measure_id=assignment.measure.id) }}"
+                   class="btn btn-sm btn-outline-primary">View</a>
+                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                  <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <form action="{{ url_for('company.request_assistance', assignment_id=assignment.id) }}" method="post"
+                          class="d-inline">
+                      <button type="submit" class="dropdown-item text-danger">Request Assistance</button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-4">
+              <div class="text-muted">No measures assigned yet.</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Set ARIA values
+  document.querySelectorAll('.progress-bar[data-valuenow]').forEach(el => {
+    const v = parseInt(el.getAttribute('data-valuenow'), 10);
+    el.setAttribute('aria-valuenow', Number.isFinite(v) ? String(v) : '0');
+  });
+
+  // Countdown logic
+  const pad = n => n.toString().padStart(2, '0');
+  function renderCountdown(el, dueISO) {
+    const due = new Date(dueISO);
+    if (isNaN(due.getTime())) { el.textContent = 'Invalid date'; el.classList.add('text-danger'); return; }
+    function tick() {
+      const now = new Date();
+      let diff = Math.floor((due - now) / 1000);
+      if (diff <= 0) { el.textContent = 'Overdue'; el.classList.add('text-danger'); el.classList.remove('text-warning'); return; }
+      const d = Math.floor(diff / 86400); diff -= d * 86400;
+      const h = Math.floor(diff / 3600);  diff -= h * 3600;
+      const m = Math.floor(diff / 60);    diff -= m * 60;
+      const s = diff;
+      el.textContent = (d > 0 ? d + 'd ' : '') + `${pad(h)}:${pad(m)}:${pad(s)}`;
+      if (d < 7) el.classList.add('text-warning');
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+  document.querySelectorAll('[data-countdown]').forEach(el => {
+    const due = el.getAttribute('data-due-at');
+    if (due) renderCountdown(el, due);
+  });
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+

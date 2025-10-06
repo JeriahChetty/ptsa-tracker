@@ -1,0 +1,30 @@
+# PTSA Tracker Environment Variables for Production
+
+# Security settings
+SECRET_KEY=generate_a_secure_random_string_here
+FLASK_ENV=production
+FLASK_DEBUG=0
+
+# Database connection
+# SQLite (simple)
+SQLALCHEMY_DATABASE_URI=sqlite:////var/lib/ptsa/ptsa_prod.db
+
+# PostgreSQL (recommended for production)
+# SQLALCHEMY_DATABASE_URI=postgresql://ptsa_user:your_strong_password@localhost/ptsa_db
+
+# Email configuration
+MAIL_SERVER=smtp.your-provider.com
+MAIL_PORT=587
+MAIL_USE_TLS=1
+MAIL_USE_SSL=0
+MAIL_USERNAME=notifications@yourdomain.com
+MAIL_PASSWORD=your_mail_password
+MAIL_DEFAULT_SENDER=PTSA Tracker <notifications@yourdomain.com>
+
+# File upload settings
+UPLOAD_FOLDER=/var/lib/ptsa/uploads
+MAX_CONTENT_LENGTH=25000000  # 25MB in bytes
+
+# Logging configuration 
+LOG_LEVEL=ERROR
+LOG_FILE=/var/log/ptsa/ptsa.log

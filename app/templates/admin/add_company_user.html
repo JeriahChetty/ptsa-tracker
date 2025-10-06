@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Add User to {{ company.name }} · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Add User to {{ company.name }}</h2>
+  <a href="{{ url_for('admin.company_profile', company_id=company.id) }}" class="btn btn-outline-secondary">Back to Company</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">User Information</h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email" name="email" required>
+      </div>
+      
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+        <div class="form-text">The user can change their password later.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="role" class="form-label">Role</label>
+        <select class="form-select" id="role" name="role">
+          <option value="company" selected>Company User</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Create User</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

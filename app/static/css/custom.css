@@ -1,0 +1,168 @@
+/* Custom.css */
+
+body {
+    background-color: #f5f8fa;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+h2, h3, h4 {
+    color: #003865;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+/* Limit max height and enable scrolling (replaces inline style) */
+.mh-220 { max-height: 220px; }
+.mh-300 { max-height: 300px; } 
+/* Assistance page utilities */
+.truncate {
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.prewrap { white-space: pre-wrap; }
+/* Limit the width of the small notes input in Assistance page */
+.assist-note-width {
+  max-width: 14rem;
+}
+
+/* Custom styles for PTSA Tracker */
+
+/* Ensure "Not Started" status is consistently grey */
+.badge.bg-secondary, 
+.text-bg-secondary,
+.status-not-started {
+    background-color: #6c757d !important; /* Bootstrap's secondary color */
+    color: #fff !important;
+}
+
+/* Add specific status class for more control */
+.status-badge[data-status="Not Started"] {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+/* Add your custom styles below */
+
+/* Progress bar styles */
+.progress-main {
+    height: 20px;
+}
+
+.progress-completed {
+    width: calc(var(--completed-percentage, 0) * 1%);
+}
+
+.progress-in-progress {
+    width: calc(var(--in-progress-percentage, 0) * 1%);
+}
+
+.progress-needs-assistance {
+    width: calc(var(--needs-assistance-percentage, 0) * 1%);
+}
+
+.progress-not-started {
+    width: calc(var(--not-started-percentage, 0) * 1%);
+}
+
+.progress-step {
+    height: 10px;
+}
+
+.progress {
+  height: 20px;
+  background-color: #e9ecef;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  transition: width 0.6s ease;
+  font-size: 0.875rem;
+}
+
+.progress-bar span {
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.progress-bar:not([style*="width: 0%"]) {
+  min-width: 2em;
+}
+
+/* Diamond rating system */
+.diamonds-container {
+    padding: 6px 0;
+}
+
+.diamonds-rating {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.diamond-icon {
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: color 0.2s ease;
+}
+
+.diamond-icon.level-1 {
+    color: #28a745; /* Green for low urgency */
+}
+
+.diamond-icon.level-2 {
+    color: #ffc107; /* Yellow for medium urgency */
+}
+
+.diamond-icon.level-3 {
+    color: #dc3545; /* Red for high urgency */
+}
+
+.diamond-icon.bi-diamond:hover,
+.diamond-icon.bi-diamond.hover {
+    opacity: 0.7;
+}
+
+/* Assuming this is where the custom-components.css file starts or has a section where we can add */
+.progress-bar {
+  transition: width 0.3s ease;
+}
+
+/* Add CSS below */
+.progress-custom {
+    height: 10px;
+}
+/* Progress widths in 5% steps (no inline styles needed) */
+.progress-bar.w-pct-0   { width: 0%; }
+.progress-bar.w-pct-5   { width: 5%; }
+.progress-bar.w-pct-10  { width: 10%; }
+.progress-bar.w-pct-15  { width: 15%; }
+.progress-bar.w-pct-20  { width: 20%; }
+.progress-bar.w-pct-25  { width: 25%; }
+.progress-bar.w-pct-30  { width: 30%; }
+.progress-bar.w-pct-35  { width: 35%; }
+.progress-bar.w-pct-40  { width: 40%; }
+.progress-bar.w-pct-45  { width: 45%; }
+.progress-bar.w-pct-50  { width: 50%; }
+.progress-bar.w-pct-55  { width: 55%; }
+.progress-bar.w-pct-60  { width: 60%; }
+.progress-bar.w-pct-65  { width: 65%; }
+.progress-bar.w-pct-70  { width: 70%; }
+.progress-bar.w-pct-75  { width: 75%; }
+.progress-bar.w-pct-80  { width: 80%; }
+.progress-bar.w-pct-85  { width: 85%; }
+.progress-bar.w-pct-90  { width: 90%; }
+.progress-bar.w-pct-95  { width: 95%; }
+.progress-bar.w-pct-100 { width: 100%; }

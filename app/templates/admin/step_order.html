@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Steps for {{ measure.title }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .draggable-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        background-color: #f8f9fa;
+        cursor: move;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }
+    .draggable-item:hover {
+        background-color: #e9ecef;
+    }
+    .draggable-item.dragging {
+        opacity: 0.5;
+        background-color: #e2e6ea;
+    }
+    .drag-handle {
+        cursor: move;
+        padding-right: 10px;
+        color: #6c757d;
+    }
+    .drag-container {
+        min-height: 400px;
+        padding: 20px;
+        border: 1px dashed #ccc;
+        border-radius: 4px;
+    }
+    .item-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        background-color: #007bff;
+        color: white;
+        margin-right: 10px;
+    }
+    .action-buttons {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+    .hidden {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-success hidden" id="save-success">
+                Order saved successfully!
+            </div>
+            
+            <div class="alert alert-danger hidden" id="save-error">
+                Error saving order. Please try again.
+            </div>
+            
+            <div class="drag-container" id="step-container">
+                {% if steps %}
+                    {% for step in steps %}
+                        <div class="draggable-item" data-id="{{ step.id }}">
+                            <div class="d-flex align-items-center">
+                                <span class="drag-handle">
+                                    <i class="fas fa-grip-lines"></i>
+                                </span>
+                                <span class="step-number">{{ loop.index }}</span>
+                                <div>
+                                    <div class="item-title">{{ step.title }}</div>
+                                    <div class="item-description text-muted">{{ step.description|truncate(100) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">No steps found for this measure.</div>
+                {% endif %}
+            </div>
+            
+            <div class="action-buttons">
+                <a href="{{ url_for('admin.manage_measure_order') }}" class="btn btn-secondary">Back to Measure Order</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('step-container');
+    
+    let sortable = Sortable.create(container, {
+        animation: 150,
+        ghostClass: 'dragging',
+        handle: '.drag-handle',
+        onEnd: function() {
+            // Get the new order
+            const items = Array.from(container.querySelectorAll('.draggable-item'));
+            const orderData = items.map((item, index) => {
+                return {
+                    id: parseInt(item.dataset.id),
+                    order: index
+                };
+            });
+            
+            // Update the step numbers visually
+            items.forEach((item, index) => {
+                const stepNumber = item.querySelector('.step-number');
+                stepNumber.textContent = index + 1;
+            });
+            
+            // Save the new order
+            saveOrder(orderData);
+        }
+    });
+    
+    function saveOrder(orderData) {
+        fetch('{{ url_for("admin.update_step_order") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(orderData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('save-success');
+            } else {
+                showMessage('save-error');
+                console.error('Error saving order:', data.error);
+            }
+        })
+        .catch(error => {
+            showMessage('save-error');
+            console.error('Error saving order:', error);
+        });
+    }
+    
+        function showMessage(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.remove('hidden');
+            setTimeout(() => {
+                element.classList.add('hidden');
+            }, 3000);
+        }
+    });
+    </script>
+    {% endblock %}

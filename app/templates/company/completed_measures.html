@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Completed Measures · PTSA Tracker{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Completed Measures</h2>
+
+{% if not assignments %}
+  <div class="alert alert-info">No completed measures yet.</div>
+{% else %}
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Measure Name</th>
+        <th>Completed At</th>
+        <th>Final Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr>
+        <td>{{ a.measure.name if a.measure else '—' }}</td>
+        <td>
+          {% set last_step = a.steps|selectattr('is_completed')|list|last %}
+          {% if last_step and last_step.completed_at %}
+            {{ last_step.completed_at.strftime('%Y-%m-%d %H:%M') }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% for r in a.reports %}
+            {% if r.final_remarks %}{{ r.final_remarks }}{% endif %}
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}

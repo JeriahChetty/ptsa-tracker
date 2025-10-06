@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Admin Profile · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 class="mb-0">Admin Profile</h2>
+    <p class="text-muted mb-0">Manage your administrator account settings</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <!-- Profile Information Card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-user me-2"></i>Profile Information
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if editing %}
+        <!-- Edit Form -->
+        <form method="POST" action="{{ url_for('admin.admin_profile') }}">
+          <input type="hidden" name="action" value="update_profile">
+          
+          <div class="mb-3">
+            <label for="email" class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="email" name="email" 
+                   value="{{ current_user.email }}" required>
+            <div class="form-text">This email is used to log into the admin panel.</div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="current_password" class="form-label">Current Password</label>
+                <input type="password" class="form-control" id="current_password" name="current_password">
+                <div class="form-text">Required to change email or password.</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_password" class="form-label">New Password</label>
+                <input type="password" class="form-control" id="new_password" name="new_password">
+                <div class="form-text">Leave blank to keep current password.</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+            <div class="form-text">Required if changing password.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i>Save Changes
+            </button>
+            <a href="{{ url_for('admin.admin_profile') }}" class="btn btn-secondary">
+              Cancel
+            </a>
+          </div>
+        </form>
+        {% else %}
+        <!-- View Mode -->
+        <dl class="row">
+          <dt class="col-sm-3">Email Address</dt>
+          <dd class="col-sm-9">{{ current_user.email }}</dd>
+          
+          <dt class="col-sm-3">Role</dt>
+          <dd class="col-sm-9">
+            <span class="badge bg-danger">Administrator</span>
+          </dd>
+          
+          <dt class="col-sm-3">Account Status</dt>
+          <dd class="col-sm-9">
+            {% if current_user.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+          </dd>
+          
+          <dt class="col-sm-3">Last Updated</dt>
+          <dd class="col-sm-9">{{ current_user.updated_at.strftime('%Y-%m-%d %H:%M') if current_user.updated_at else 'N/A' }}</dd>
+          
+          <dt class="col-sm-3">Account Created</dt>
+          <dd class="col-sm-9">{{ current_user.created_at.strftime('%Y-%m-%d %H:%M') if current_user.created_at else 'N/A' }}</dd>
+        </dl>
+        
+        <div class="mt-3">
+          <a href="{{ url_for('admin.admin_profile', edit=1) }}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i>Edit Profile
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <!-- Quick Actions Card -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-cog me-2"></i>Quick Actions
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('admin.notification_settings') }}" class="btn btn-outline-primary">
+            <i class="fas fa-bell me-2"></i>Notification Settings
+          </a>
+          <a href="{{ url_for('admin.test_company_email') }}" class="btn btn-outline-info">
+            <i class="fas fa-envelope me-2"></i>Test Email System
+          </a>
+          <a href="{{ url_for('admin.seed_data_endpoint') }}" class="btn btn-outline-warning">
+            <i class="fas fa-database me-2"></i>Seed Database
+          </a>
+          <a href="{{ url_for('admin.company_benchmarking_history') }}" class="btn btn-outline-success">
+            <i class="fas fa-chart-line me-2"></i>Benchmarking History
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- System Information Card -->
+    <div class="card mt-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-info-circle me-2"></i>System Information
+        </h5>
+      </div>
+      <div class="card-body">
+        <small class="text-muted">
+          <dl class="row mb-0">
+            <dt class="col-6">Version:</dt>
+            <dd class="col-6">2.0.0</dd>
+            
+            <dt class="col-6">Environment:</dt>
+            <dd class="col-6">{{ config.get('ENV', 'Production') }}</dd>
+            
+            <dt class="col-6">Database:</dt>
+            <dd class="col-6">SQLite</dd>
+            
+            <dt class="col-6">Debug Mode:</dt>
+            <dd class="col-6">
+              {% if config.get('DEBUG', False) %}
+                <span class="text-warning">Enabled</span>
+              {% else %}
+                <span class="text-success">Disabled</span>
+              {% endif %}
+            </dd>
+          </dl>
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Password confirmation validation
+  const newPassword = document.getElementById('new_password');
+  const confirmPassword = document.getElementById('confirm_password');
+  
+  if (newPassword && confirmPassword) {
+    function validatePasswordMatch() {
+      if (newPassword.value && confirmPassword.value) {
+        if (newPassword.value !== confirmPassword.value) {
+          confirmPassword.setCustomValidity('Passwords do not match');
+        } else {
+          confirmPassword.setCustomValidity('');
+        }
+      } else {
+        confirmPassword.setCustomValidity('');
+      }
+    }
+    
+    newPassword.addEventListener('input', validatePasswordMatch);
+    confirmPassword.addEventListener('input', validatePasswordMatch);
+  }
+  
+  // Form validation
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const currentPassword = document.getElementById('current_password');
+      const newPassword = document.getElementById('new_password');
+      const email = document.getElementById('email');
+      
+      // If changing email or password, current password is required
+      if ((newPassword && newPassword.value) || 
+          (email && email.value !== '{{ current_user.email }}')) {
+        if (!currentPassword || !currentPassword.value) {
+          e.preventDefault();
+          alert('Current password is required to make changes.');
+          if (currentPassword) currentPassword.focus();
+          return false;
+        }
+      }
+      
+      // If setting new password, confirmation is required
+      if (newPassword && newPassword.value) {
+        const confirmPassword = document.getElementById('confirm_password');
+        if (!confirmPassword || !confirmPassword.value) {
+          e.preventDefault();
+          alert('Please confirm your new password.');
+          if (confirmPassword) confirmPassword.focus();
+          return false;
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+/* Global app styles / light Bootstrap theming */
+body { background-color: #f5f8fa; font-family: 'Segoe UI', sans-serif; }
+h2, h3, h4 { color: #003865; }
+.card { border-radius: 0.5rem; }
+.navbar-brand { font-weight: bold; letter-spacing: 1px; }
+
+/* Status badges consistency */
+.badge.bg-secondary,
+.text-bg-secondary,
+.status-not-started { background-color: #6c757d !important; color: #fff !important; }
+.status-badge[data-status="Not Started"] { background-color: #6c757d !important; color: #fff !important; }
+
+/* Tables / titles */
+.card-title { font-size: 1.1rem; }

@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ptsa_db
+      POSTGRES_USER: ptsa_user
+      POSTGRES_PASSWORD: ptsa_pass
+    volumes:
+      - ptsa_db:/var/lib/postgresql/data
+
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      FLASK_APP: wsgi.py
+      FLASK_ENV: production
+      SECRET_KEY: replace_with_a_long_random_value
+      SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://ptsa_user:ptsa_pass@db:5432/ptsa_db
+      UPLOAD_FOLDER: /app/app/uploads
+      MAX_CONTENT_LENGTH: "26214400"
+      MAIL_SERVER: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_USE_TLS: "1"
+      MAIL_USERNAME: youraddress@example.com
+      MAIL_PASSWORD: your_app_password
+      MAIL_DEFAULT_SENDER: "PTSA Tracker <youraddress@example.com>"
+    volumes:
+      - uploads:/app/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"] # Change to an existing route
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ptsa_db:
+  uploads:

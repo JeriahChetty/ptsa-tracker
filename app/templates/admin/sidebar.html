@@ -1,0 +1,77 @@
+<!-- Admin Sidebar Navigation -->
+<div class="sidebar-sticky">
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">
+        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.companies' }}" href="{{ url_for('admin.companies') }}">
+        <i class="fas fa-building me-2"></i>Companies
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.company_benchmarking_history' }}" href="{{ url_for('admin.company_benchmarking_history') }}">
+        <i class="fas fa-chart-line me-2"></i>Benchmarking History
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.measures' }}" href="{{ url_for('admin.measures') }}">
+        <i class="fas fa-tasks me-2"></i>Measures
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.measure_history' }}" href="{{ url_for('admin.measure_history') }}">
+        <i class="fas fa-history me-2"></i>Measure History
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.assistance_queue' }}" href="{{ url_for('admin.assistance_queue') }}">
+        <i class="fas fa-question-circle me-2"></i>Assistance Requests
+        {% if pending_assistance_count > 0 %}
+          <span class="badge bg-danger ms-1">{{ pending_assistance_count }}</span>
+        {% endif %}
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.admin_notifications' }}" href="{{ url_for('admin.admin_notifications') }}">
+        <i class="fas fa-bell me-2"></i>Notifications
+        {% if unread_notifications_count > 0 %}
+          <span class="badge bg-warning ms-1">{{ unread_notifications_count }}</span>
+        {% endif %}
+      </a>
+    </li>
+  </ul>
+  
+  <!-- Settings Section -->
+  <hr class="my-3">
+  
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.admin_profile' }}" href="{{ url_for('admin.admin_profile') }}">
+        <i class="fas fa-user me-2"></i>Admin Profile
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if request.endpoint == 'admin.notification_settings' }}" href="{{ url_for('admin.notification_settings') }}">
+        <i class="fas fa-cog me-2"></i>Settings
+      </a>
+    </li>
+    
+    {% if current_user.role == 'admin' %}
+    <li class="nav-item">
+      <a class="nav-link" href="{{ url_for('admin.test_company_email') }}">
+        <i class="fas fa-envelope me-2"></i>Test Email
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</div>

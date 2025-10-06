@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Seed Database · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-seedling me-2"></i>
+                        Seed Database with Comprehensive Data
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>
+                            About Database Seeding
+                        </h6>
+                        <p class="mb-0">
+                            This will populate your database with comprehensive sample data including:
+                        </p>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>8 realistic South African tooling companies:</strong> Gehring Technologies, ACME Precision, Bosch Tooling, Sandvik, etc.</li>
+                            <li><strong>8 comprehensive improvement measures</strong> with detailed implementation steps</li>
+                            <li><strong>Realistic assignments and progress data</strong> based on company maturity</li>
+                            <li><strong>2 years of benchmarking data</strong> per company showing growth trends</li>
+                            <li><strong>Sample users</strong> for each company with login credentials</li>
+                            <li><strong>Notification configurations</strong> and assistance workflows</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-users me-2"></i>
+                            Login Credentials (After Seeding)
+                        </h6>
+                        <ul class="mb-0">
+                            <li><strong>Admin:</strong> admin@ptsa.co.za / admin123</li>
+                            <li><strong>Gehring Technologies:</strong> admin@gehring.co.za / gehring123</li>
+                            <li><strong>ACME Precision:</strong> operations@acmeprecision.co.za / acme123</li>
+                            <li><strong>Bosch Tooling:</strong> info@bosch-tooling.co.za / bosch123</li>
+                            <li><strong>Sandvik Tooling:</strong> sa.admin@sandvik.com / sandvik123</li>
+                            <li><strong>And 4 more companies</strong> with realistic industry data</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('admin.seed_data_endpoint') }}">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmSeeding" required>
+                                <label class="form-check-label" for="confirmSeeding">
+                                    I understand that this will add comprehensive sample data to the database
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-seedling me-1"></i>
+                                Seed Database with Comprehensive Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

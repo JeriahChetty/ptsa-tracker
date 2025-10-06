@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}Admin Notifications · PTSA Tracker{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <style>
+    .countdown-timer {
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    .overdue { color: #dc3545; }
+    .due-soon { color: #fd7e14; }
+    .due-later { color: #198754; }
+    .overdue-badge { background-color: #dc3545; }
+    .due-soon-badge { background-color: #fd7e14; }
+    .due-later-badge { background-color: #198754; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="mb-0">Admin Notifications</h2>
+  <div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    <button type="button" class="btn btn-outline-primary ms-2" onclick="location.reload();">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Overdue Measures Section -->
+{% if overdue_assignments %}
+<div class="card border-danger mb-4">
+  <div class="card-header bg-danger text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      Overdue Measures ({{ overdue_assignments|length }})
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    <ul class="list-group list-group-flush" role="list">
+      {% for assignment in overdue_assignments %}
+        <li class="list-group-item d-flex justify-content-between align-items-start border-start border-danger border-3">
+          <div class="me-3 flex-grow-1">
+            <div class="fw-semibold">
+              {{ assignment.measure.name if assignment.measure else 'Unknown Measure' }}
+            </div>
+            <div class="small text-muted mb-1">
+              Company: {{ assignment.company.name if assignment.company else 'Unknown Company' }}
+            </div>
+            <div class="small">
+              {% if assignment.due_at %}
+                {% set days_overdue = (moment().date() - assignment.due_at.date()).days %}
+                <span class="badge overdue-badge">
+                  <i class="fas fa-clock me-1"></i>
+                  Overdue by {{ days_overdue }} day{{ 's' if days_overdue != 1 else '' }}
+                </span>
+                <span class="text-muted ms-2">Due: {{ assignment.due_at.strftime('%Y-%m-%d') }}</span>
+              {% else %}
+                <span class="badge bg-secondary">No due date</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-sm btn-danger" 
+               href="{{ url_for('admin.view_assignment', assignment_id=assignment.id) }}" 
+               role="button" title="View assignment">
+              <i class="fas fa-eye me-1"></i>View
+            </a>
+            <a class="btn btn-sm btn-outline-danger" 
+               href="{{ url_for('admin.company_profile', company_id=assignment.company.id) }}" 
+               role="button" title="View company">
+              <i class="fas fa-building me-1"></i>Company
+            </a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Upcoming Measures Section -->
+{% if upcoming_assignments %}
+<div class="card mb-4">
+  <div class="card-header bg-warning text-dark">
+    <h5 class="mb-0">
+      <i class="fas fa-calendar-alt me-2"></i>
+      Upcoming Due Measures ({{ upcoming_assignments|length }})
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    <ul class="list-group list-group-flush" role="list">
+      {% for assignment in upcoming_assignments %}
+        {% if assignment.due_at %}
+          {% set days_left = (assignment.due_at.date() - moment().date()).days %}
+          {% set urgency_class = 'due-later' if days_left > 7 else ('due-soon' if days_left > 0 else 'overdue') %}
+          {% set badge_class = 'due-later-badge' if days_left > 7 else ('due-soon-badge' if days_left > 0 else 'overdue-badge') %}
+        {% else %}
+          {% set days_left = none %}
+          {% set urgency_class = 'due-later' %}
+          {% set badge_class = 'bg-secondary' %}
+        {% endif %}
+
+        <li class="list-group-item d-flex justify-content-between align-items-start">
+          <div class="me-3 flex-grow-1">
+            <div class="fw-semibold">
+              {{ assignment.measure.name if assignment.measure else 'Unknown Measure' }}
+            </div>
+            <div class="small text-muted mb-1">
+              Company: {{ assignment.company.name if assignment.company else 'Unknown Company' }}
+            </div>
+            <div class="small">
+              {% if assignment.due_at %}
+                <span class="badge {{ badge_class }} countdown-timer" 
+                      data-due-date="{{ assignment.due_at.isoformat() }}"
+                      data-assignment-id="{{ assignment.id }}">
+                  <i class="fas fa-clock me-1"></i>
+                  <span class="countdown-text">
+                    {% if days_left == 0 %}
+                      Due today
+                    {% elif days_left == 1 %}
+                      Due tomorrow
+                    {% elif days_left > 0 %}
+                      {{ days_left }} days left
+                    {% endif %}
+                  </span>
+                </span>
+                <span class="text-muted ms-2">Due: {{ assignment.due_at.strftime('%Y-%m-%d') }}</span>
+              {% else %}
+                <span class="badge bg-secondary">No due date</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-sm btn-outline-primary" 
+               href="{{ url_for('admin.view_assignment', assignment_id=assignment.id) }}" 
+               role="button" title="View assignment">
+              <i class="fas fa-eye me-1"></i>View
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" 
+               href="{{ url_for('admin.company_profile', company_id=assignment.company.id) }}" 
+               role="button" title="View company">
+              <i class="fas fa-building me-1"></i>Company
+            </a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Assistance Requests Section -->
+<div class="card mb-4">
+  <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="fas fa-hands-helping me-2"></i>
+      Assistance Requests
+    </h5>
+    <span class="badge bg-light text-danger">{{ assistance_notifications|length }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if assistance_notifications %}
+      <div class="list-group list-group-flush">
+        {% for notification in assistance_notifications %}
+          <div id="notification-{{ notification.id }}" class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">{{ notification.subject }}</h6>
+              <small class="text-muted">{{ notification.notify_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            
+            <div class="mb-3">{{ notification.body }}</div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                {% if notification.company %}
+                <span class="badge bg-secondary">{{ notification.company.name }}</span>
+                {% endif %}
+                
+                {% if notification.assignment %}
+                <a href="{{ url_for('admin.company_profile', company_id=notification.company.id) }}" 
+                   class="btn btn-sm btn-outline-secondary">
+                  View Company
+                </a>
+                {% endif %}
+              </div>
+              
+              <div>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                        data-bs-target="#resolveModal{{ notification.id }}">
+                  Resolve
+                </button>
+              </div>
+            </div>
+            
+            <!-- Modal for resolution -->
+            <div class="modal fade" id="resolveModal{{ notification.id }}" tabindex="-1" 
+                 aria-labelledby="resolveModalLabel{{ notification.id }}" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form action="{{ url_for('admin.resolve_assistance_notification', notification_id=notification.id) }}" 
+                        method="POST"
+                        id="resolveForm{{ notification.id }}"
+                        onsubmit="handleResolveSubmit(event, '{{ notification.id }}')">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="resolveModalLabel{{ notification.id }}">Resolve Assistance Request</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <p>Are you sure you want to resolve this assistance request?</p>
+                      <p><strong>Subject:</strong> {{ notification.subject }}</p>
+                      
+                      <div class="mb-3">
+                        <label for="notes{{ notification.id }}" class="form-label">Resolution Notes</label>
+                        <textarea class="form-control" id="notes{{ notification.id }}" name="notes" 
+                                  rows="3" placeholder="Optional notes about the resolution"></textarea>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary">Resolve Request</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="p-4 text-center text-muted">
+        <p>No pending assistance requests.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Other Notifications Section -->
+<div class="card">
+  <div class="card-header bg-info text-white">
+    <h5 class="mb-0">Other Notifications</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if other_notifications %}
+      <div class="list-group list-group-flush">
+        {% for notification in other_notifications %}
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">{{ notification.subject }}</h6>
+              <small class="text-muted">{{ notification.notify_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            <div class="mb-2">{{ notification.body }}</div>
+            <div>
+              {% if notification.company %}
+              <span class="badge bg-secondary">{{ notification.company.name }}</span>
+              {% endif %}
+              
+              {% if not notification.read_at %}
+                <form action="{{ url_for('admin.mark_notification_read', notification_id=notification.id) }}" 
+                      method="post" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">Mark Read</button>
+                </form>
+              {% else %}
+                <span class="badge bg-light text-dark">Read</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="p-4 text-center text-muted">
+        <p>No other notifications.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Real-time countdown functionality
+function updateCountdowns() {
+  const now = new Date();
+  
+  document.querySelectorAll('.countdown-timer[data-due-date]').forEach(element => {
+    const dueDate = new Date(element.dataset.dueDate);
+    const timeDiff = dueDate - now;
+    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    const countdownText = element.querySelector('.countdown-text');
+    if (!countdownText) return;
+    
+    if (daysDiff < 0) {
+      // Overdue
+      const daysOverdue = Math.abs(daysDiff);
+      countdownText.textContent = `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''}`;
+      element.className = element.className.replace(/due-\w+-badge|bg-\w+/, 'overdue-badge');
+    } else if (daysDiff === 0) {
+      // Due today
+      countdownText.textContent = 'Due today';
+      element.className = element.className.replace(/due-\w+-badge|bg-\w+/, 'due-soon-badge');
+    } else if (daysDiff === 1) {
+      // Due tomorrow
+      countdownText.textContent = 'Due tomorrow';
+      element.className = element.className.replace(/due-\w+-badge|bg-\w+/, 'due-soon-badge');
+    } else if (daysDiff <= 7) {
+      // Due soon
+      countdownText.textContent = `${daysDiff} days left`;
+      element.className = element.className.replace(/due-\w+-badge|bg-\w+/, 'due-soon-badge');
+    } else {
+      // Due later
+      countdownText.textContent = `${daysDiff} days left`;
+      element.className = element.className.replace(/due-\w+-badge|bg-\w+/, 'due-later-badge');
+    }
+  });
+}
+
+// Update countdowns immediately and then every minute
+document.addEventListener('DOMContentLoaded', function() {
+  updateCountdowns();
+  setInterval(updateCountdowns, 60000); // Update every minute
+});
+
+function handleResolveSubmit(event, notificationId) {
+  // Remove the notification element from the DOM after form submission
+  const form = document.getElementById('resolveForm' + notificationId);
+  form.addEventListener('submit', function() {
+    // Add a slight delay to allow the form to submit
+    setTimeout(function() {
+      const notificationElement = document.getElementById('notification-' + notificationId);
+      if (notificationElement) {
+        notificationElement.remove();
+      }
+      
+      // Check if there are no more notifications
+      const remainingNotifications = document.querySelectorAll('[id^="notification-"]');
+      if (remainingNotifications.length === 0) {
+        const assistanceCard = document.querySelector('.card-body');
+        if (assistanceCard) {
+          assistanceCard.innerHTML = '<div class="p-4 text-center text-muted"><p>No pending assistance requests.</p></div>';
+        }
+      }
+      
+      // Update the badge count
+      const badgeCount = document.querySelector('.card-header .badge');
+      if (badgeCount) {
+        const currentCount = parseInt(badgeCount.textContent) || 0;
+        if (currentCount > 0) {
+          badgeCount.textContent = currentCount - 1;
+        }
+      }
+    }, 100);
+  });
+}
+
+// Close the modal after submission
+document.querySelectorAll('form[id^="resolveForm"]').forEach(form => {
+  form.addEventListener('submit', function() {
+    const modalId = this.closest('.modal').id;
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById(modalId));
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+  });
+});
+</script>
+{% endblock %}

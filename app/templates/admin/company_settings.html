@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ company.name }} · Settings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Company Settings - {{ company.name }}</h2>
+  <a href="{{ url_for('admin.company_profile', company_id=company.id) }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Profile
+  </a>
+</div>
+
+<!-- Benchmarking Reminder Settings -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">
+      <i class="fas fa-bell me-2"></i>Benchmarking Reminder Settings
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="benchmarking_reminder_months" class="form-label">
+              Reminder Frequency (Months) <span class="text-danger">*</span>
+            </label>
+            <input type="number" class="form-control" id="benchmarking_reminder_months" 
+                   name="benchmarking_reminder_months" 
+                   value="{{ company.benchmarking_reminder_months or 12 }}" 
+                   min="1" max="60" required>
+            <div class="form-text">
+              How often (in months) should this company receive reminders to update their performance data?
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Current Status</label>
+            <div class="form-control-plaintext">
+              {% if company.last_benchmarking_reminder %}
+                <small class="text-muted">
+                  Last reminder sent: {{ company.last_benchmarking_reminder.strftime('%Y-%m-%d %H:%M') }}
+                </small><br>
+              {% endif %}
+              {% if company.next_benchmarking_due %}
+                <small class="text-warning">
+                  Next reminder due: {{ company.next_benchmarking_due.strftime('%Y-%m-%d') }}
+                </small>
+              {% else %}
+                <small class="text-info">
+                  No reminders scheduled yet
+                </small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i>Save Settings
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Benchmarking History -->
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">
+      <i class="fas fa-history me-2"></i>Benchmarking History
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if company.benchmarks %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Turnover</th>
+              <th>Tools Produced</th>
+              <th>On-Time Delivery</th>
+              <th>Employees</th>
+              <th>Entered By</th>
+              <th>Date Added</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for benchmark in company.benchmarks %}
+            <tr>
+              <td>
+                <span class="badge bg-primary">{{ benchmark.data_year }}</span>
+              </td>
+              <td>{{ benchmark.turnover or '-' }}</td>
+              <td>{{ benchmark.tools_produced or '-' }}</td>
+              <td>{{ benchmark.on_time_delivery or '-' }}</td>
+              <td>{{ benchmark.employees or '-' }}</td>
+              <td>
+                <span class="badge bg-{{ 'success' if benchmark.entered_by_role == 'admin' else 'info' }}">
+                  {{ benchmark.entered_by_role }}
+                </span>
+              </td>
+              <td>{{ benchmark.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-3">
+        <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+        <p class="text-muted">No benchmarking data recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

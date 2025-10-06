@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn instance to serve PTSA Tracker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/ptsa_tracker
+Environment="PATH=/path/to/ptsa_tracker/venv/bin"
+EnvironmentFile=/path/to/ptsa_tracker/.env
+ExecStart=/path/to/ptsa_tracker/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 wsgi:application
+
+[Install]
+WantedBy=multi-user.target

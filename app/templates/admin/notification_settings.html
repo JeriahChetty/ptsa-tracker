@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Notification Settings · Admin{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="h3 mb-0">Notification Settings</h1>
+  <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" class="row gy-3">
+      <div class="col-md-4">
+        <label for="send_time" class="form-label">Daily send time (UTC)</label>
+        <input type="time" id="send_time" name="send_time" class="form-control"
+               value="{{ current_hhmm }}" required aria-describedby="tzHelp">
+        <div id="tzHelp" class="form-text">
+          This time is in <strong>UTC</strong>. If your server is in a different timezone, either convert here, or schedule the CLI hourly (recommended).
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="lead_days" class="form-label">Lead days</label>
+        <input type="number" id="lead_days" name="lead_days" class="form-control"
+               min="0" step="1" value="{{ cfg.lead_days }}">
+        <div class="form-text">Create notifications when a measure is due within this many days.</div>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

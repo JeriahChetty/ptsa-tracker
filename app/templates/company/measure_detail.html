@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}{{ measure.name }} · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <a href="{{ url_for('company.dashboard') }}" class="btn btn-sm btn-outline-secondary mb-2">&larr; Back to Dashboard</a>
+    <h2 class="mb-0">{{ measure.name }}</h2>
+  </div>
+  <div class="text-end">
+    <span class="badge fs-6 bg-{{ status_class(assignment.status) }}">{{ assignment.status|default('Not Started') }}</span>
+    {% if assignment.due_at %}
+    <div class="mt-2">
+      <div id="countdown" class="countdown fs-6 fw-bold" data-due="{{ assignment.due_at.isoformat() }}">
+        Calculating...
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Measure Details & Progress -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Measure Details</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Description:</strong> {{ measure.measure_detail|default('No description provided.') }}</p>
+        <p><strong>Target:</strong> {{ measure.target|default('Not specified.') }}</p>
+        <p><strong>Due Date:</strong> 
+          {% if assignment.due_at %}
+            <span class="{{ 'text-danger fw-bold' if assignment.is_overdue else '' }}">
+              {{ assignment.due_at.strftime('%Y-%m-%d') }}
+            </span>
+          {% else %}
+            <span class="text-muted">Not set</span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Steps to Complete</h5>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for step in steps %}
+          <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+              <div class="form-check">
+                <form action="{{ url_for('company.toggle_step', step_id=step.id) }}" method="POST" class="d-inline">
+                  <input class="form-check-input" type="checkbox" 
+                         id="step-{{ step.id }}" 
+                         onchange="this.form.submit()"
+                         {% if step.is_completed %}checked{% endif %}>
+                  <label class="form-check-label {% if step.is_completed %}text-decoration-line-through text-muted{% endif %}" for="step-{{ step.id }}">
+                    {{ step.title }}
+                  </label>
+                </form>
+              </div>
+              <small class="text-muted">
+                {% if step.is_completed and step.completed_at %}
+                  Completed on {{ step.completed_at.strftime('%Y-%m-%d') }}
+                {% endif %}
+              </small>
+            </div>
+            
+            <!-- Step Documents -->
+            <div class="mt-2 mb-3">
+              <h6 class="text-muted mb-2">Attachments</h6>
+              <div class="row g-2">
+                {% for attachment in step.attachments %}
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center border rounded p-2">
+                    <span class="me-auto text-truncate">{{ attachment.filename }}</span>
+                    <a href="{{ url_for('company.download_attachment', attachment_id=attachment.id) }}" class="btn btn-sm btn-outline-primary ms-2" title="Download">
+                      <i class="bi bi-download"></i>
+                    </a>
+                    <form action="{{ url_for('company.delete_attachment', attachment_id=attachment.id) }}" method="POST" class="ms-2">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                  <p class="text-muted small">No files uploaded for this step.</p>
+                </div>
+                {% endfor %}
+              </div>
+              
+              <!-- Upload form for this step -->
+              <form action="{{ url_for('company.upload_attachment') }}" method="POST" enctype="multipart/form-data" class="mt-2">
+                <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                <input type="hidden" name="step_id" value="{{ step.id }}">
+                <label for="step-file-{{ step.id }}" class="form-label visually-hidden">Upload attachment for this step</label>
+                <div class="input-group input-group-sm">
+                  <input type="file" id="step-file-{{ step.id }}" class="form-control form-control-sm" name="file" required>
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">Upload</button>
+                </div>
+                <div class="form-text">Allowed formats: PDF, Word, Excel, Images</div>
+              </form>
+            </div>
+            
+            <!-- Step Comments -->
+            <div class="mt-3">
+              <h6 class="text-muted mb-2">Comments</h6>
+              {% if step.comments %}
+                <div class="comments-container mb-3">
+                  {% for comment in step.comments %}
+                    <div class="comment border-start border-3 ps-3 mb-2">
+                      <div class="comment-header d-flex justify-content-between">
+                        <strong>{{ comment.user.email if comment.user else 'Unknown' }}</strong>
+                        <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                      </div>
+                      <div class="comment-body">
+                        {{ comment.body }}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted small">No comments yet.</p>
+              {% endif %}
+              
+              <!-- Comment form -->
+              <form action="{{ url_for('company.add_step_comment', step_id=step.id) }}" method="POST">
+                <div class="form-floating mb-2">
+                  <textarea class="form-control comment-textarea" id="comment-{{ step.id }}" name="body" placeholder="Add comment"></textarea>
+                  <label for="comment-{{ step.id }}">Add comment</label>
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button type="submit" class="btn btn-sm btn-primary">Add Comment</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% else %}
+          <div class="list-group-item text-muted">No steps defined for this measure.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Actions, Final Remarks & General Attachments -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Actions</h5>
+      </div>
+      <div class="card-body">
+        <form action="{{ url_for('company.request_assistance', assignment_id=assignment.id) }}" method="post" class="d-grid mb-3">
+          <button type="submit" class="btn btn-danger">
+            Request Assistance
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Final Remarks Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Final Remarks</h5>
+      </div>
+      <div class="card-body">
+        {% if assignment.reports %}
+          {% for report in assignment.reports %}
+            <div class="report border-start border-3 ps-3 mb-3">
+              <div class="report-header d-flex justify-content-between">
+                <strong>{{ report.user.email if report.user else 'Unknown' }}</strong>
+                <small class="text-muted">{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+              </div>
+              <div class="report-body">
+                {{ report.body }}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-3">No final remarks added yet.</p>
+        {% endif %}
+
+        <form action="{{ url_for('company.add_assignment_report', assignment_id=assignment.id) }}" method="POST">
+          <div class="form-floating mb-3">
+            <textarea class="form-control report-textarea" id="report" name="body" placeholder="Add final remarks"></textarea>
+            <label for="report">Add final remarks</label>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Submit Remarks</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- General Attachments -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">General Attachments</h5>
+      </div>
+      <div class="card-body">
+        <form action="{{ url_for('company.upload_attachment') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+          <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+          <label for="attachment-file" class="form-label">Upload attachment</label>
+          <div class="input-group">
+            <input type="file" class="form-control" id="attachment-file" name="file" required>
+            <button class="btn btn-outline-secondary" type="submit">Upload</button>
+          </div>
+        </form>
+        <div class="list-group">
+          {% for attachment in assignment.attachments if attachment.step_id is none %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{{ url_for('company.download_attachment', attachment_id=attachment.id) }}" class="text-truncate me-3">{{ attachment.filename }}</a>
+              <form action="{{ url_for('company.delete_attachment', attachment_id=attachment.id) }}" method="POST" class="d-inline">
+                <button type="submit" class="btn-close" aria-label="Delete attachment"></button>
+              </form>
+            </div>
+          {% else %}
+            <div class="list-group-item text-muted">No general attachments yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap Icons if not already included
+    if (!document.querySelector('link[href*="bootstrap-icons"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+      document.head.appendChild(link);
+    }
+    
+    // Countdown functionality
+    const countdownEl = document.getElementById('countdown');
+    if (countdownEl) {
+      const dueDate = new Date(countdownEl.dataset.due);
+      
+      function updateCountdown() {
+        const now = new Date();
+        const diff = dueDate - now;
+        
+        // Format the display
+        if (diff <= 0) {
+          countdownEl.textContent = "OVERDUE";
+          countdownEl.classList.add('text-danger');
+        } else {
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          
+          // Format with leading zeros
+          const pad = num => String(num).padStart(2, '0');
+          
+          if (days > 0) {
+            countdownEl.textContent = `${days} day${days !== 1 ? 's' : ''} ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+          } else {
+            countdownEl.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+          }
+          
+          // Change color if less than 7 days remaining
+          if (days < 7) {
+            countdownEl.classList.add('text-danger');
+          } else {
+            countdownEl.classList.remove('text-danger');
+          }
+        }
+      }
+      
+      // Update immediately and then every second
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    }
+  });
+</script>
+<style>
+  .comment-textarea {
+    height: 100px;
+  }
+  .report-textarea {
+    height: 120px;
+  }
+  .countdown {
+    min-width: 120px;
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}Edit Measure · PTSA Tracker{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .step-item {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: white;
+    transition: box-shadow 0.2s;
+  }
+  
+  .step-item:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  
+  .step-content {
+    flex-grow: 1;
+  }
+  
+  .add-step-btn {
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .add-step-btn:hover {
+    border-color: #007bff;
+    color: #007bff;
+    background-color: #f8f9fa;
+  }
+  
+  .remove-step {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  
+  .remove-step:hover {
+    opacity: 1;
+  }
+  
+  .form-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+  }
+  
+  .section-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 class="mb-0">Edit Measure</h2>
+    <p class="text-muted mb-0">Update measure details and implementation steps</p>
+  </div>
+  <div>
+    <a href="{{ url_for('admin.measures') }}" class="btn btn-outline-secondary me-2">
+      <i class="fas fa-arrow-left me-1"></i>Back to Measures
+    </a>
+    <a href="{{ url_for('admin.measure_profile', measure_id=measure.id) }}" class="btn btn-outline-info">
+      <i class="fas fa-eye me-1"></i>View Profile
+    </a>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('admin.edit_measure', measure_id=measure.id) }}">
+  <!-- Basic Information -->
+  <div class="form-section">
+    <h5 class="section-title">
+      <i class="fas fa-info-circle me-2"></i>Basic Information
+    </h5>
+    
+    <div class="row g-3">
+      <div class="col-12">
+        <label for="name" class="form-label">Measure Name *</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ measure.name }}" required>
+      </div>
+      
+      <div class="col-12">
+        <label for="measure_detail" class="form-label">Description</label>
+        <textarea class="form-control" id="measure_detail" name="measure_detail" rows="4" placeholder="Detailed description of the improvement measure...">{{ measure.measure_detail or '' }}</textarea>
+      </div>
+      
+      <div class="col-md-6">
+        <label for="target" class="form-label">Target/Goal</label>
+        <input type="text" class="form-control" id="target" name="target" value="{{ measure.target or '' }}" placeholder="e.g., Reduce waste by 30%">
+      </div>
+      
+      <div class="col-md-6">
+        <label for="departments" class="form-label">Departments Involved</label>
+        <input type="text" class="form-control" id="departments" name="departments" value="{{ measure.departments or '' }}" placeholder="e.g., Production, Quality, Maintenance">
+      </div>
+    </div>
+  </div>
+
+  <!-- Responsibility & Participation -->
+  <div class="form-section">
+    <h5 class="section-title">
+      <i class="fas fa-users me-2"></i>Responsibility & Participation
+    </h5>
+    
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label for="responsible" class="form-label">Responsible Person/Role</label>
+        <input type="text" class="form-control" id="responsible" name="responsible" value="{{ measure.responsible or '' }}" placeholder="e.g., Production Manager">
+      </div>
+      
+      <div class="col-md-6">
+        <label for="participants" class="form-label">Participants</label>
+        <input type="text" class="form-control" id="participants" name="participants" value="{{ measure.participants or '' }}" placeholder="e.g., Shop floor team, Engineers">
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline & Priority -->
+  <div class="form-section">
+    <h5 class="section-title">
+      <i class="fas fa-calendar me-2"></i>Timeline & Priority
+    </h5>
+    
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label for="start_date" class="form-label">Start Date</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ measure.start_date.strftime('%Y-%m-%d') if measure.start_date else '' }}">
+      </div>
+      
+      <div class="col-md-4">
+        <label for="end_date" class="form-label">End Date</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ measure.end_date.strftime('%Y-%m-%d') if measure.end_date else '' }}">
+      </div>
+      
+      <div class="col-md-4">
+        <label for="default_duration_days" class="form-label">Default Duration (days)</label>
+        <input type="number" class="form-control" id="default_duration_days" name="default_duration_days" min="1" value="{{ measure.default_duration_days or '' }}">
+      </div>
+      
+      <div class="col-md-6">
+        <label for="default_urgency" class="form-label">Default Priority Level</label>
+        <select class="form-select" id="default_urgency" name="default_urgency">
+          <option value="1" {% if measure.default_urgency == 1 %}selected{% endif %}>Low Priority (1)</option>
+          <option value="2" {% if measure.default_urgency == 2 %}selected{% endif %}>Normal Priority (2)</option>
+          <option value="3" {% if measure.default_urgency == 3 %}selected{% endif %}>High Priority (3)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Implementation Steps -->
+  <div class="form-section" data-step-count="{{ measure.steps|length }}">
+    <h5 class="section-title">
+      <i class="fas fa-list-ol me-2"></i>Implementation Steps
+    </h5>
+    
+    <div id="stepsContainer">
+      {% for step in measure.steps|sort(attribute='step') %}
+      <div class="step-item" data-step-number="{{ step.step }}">
+        <div class="d-flex align-items-start">
+          <div class="step-number">{{ step.step }}</div>
+          <div class="step-content">
+            <input type="hidden" name="step_ids[]" value="{{ step.id }}">
+            <div class="mb-2">
+              <label class="form-label small">Step Title</label>
+              <input type="text" class="form-control" name="step_titles[]" value="{{ step.title }}" placeholder="Step title...">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Step Description</label>
+              <textarea class="form-control" name="step_descriptions[]" rows="2" placeholder="Detailed description of this step...">{{ step.description or '' }}</textarea>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-step ms-2" title="Remove Step">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div class="add-step-btn" id="addStepBtn">
+      <i class="fas fa-plus me-2"></i>Add New Step
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <a href="{{ url_for('admin.measures') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-times me-1"></i>Cancel
+      </a>
+    </div>
+    <div>
+      <button type="button" class="btn btn-outline-danger me-2" onclick="deleteMeasure()">
+        <i class="fas fa-trash me-1"></i>Delete Measure
+      </button>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save me-1"></i>Save Changes
+      </button>
+    </div>
+  </div>
+</form>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this measure?</p>
+        <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+        <p>All associated steps and assignments will also be deleted.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('admin.delete_measure', measure_id=measure.id) }}" class="d-inline">
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash me-1"></i>Delete Measure
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Get initial step count from data attribute
+  const formSection = document.querySelector('.form-section[data-step-count]');
+  const initialStepCount = parseInt(formSection.getAttribute('data-step-count')) || 0;
+  let stepCounter = initialStepCount;
+  
+  // Add new step
+  document.getElementById('addStepBtn').addEventListener('click', function() {
+    stepCounter++;
+    const stepHtml = `
+      <div class="step-item" data-step-number="${stepCounter}">
+        <div class="d-flex align-items-start">
+          <div class="step-number">${stepCounter}</div>
+          <div class="step-content">
+            <input type="hidden" name="step_ids[]" value="">
+            <div class="mb-2">
+              <label class="form-label small">Step Title</label>
+              <input type="text" class="form-control" name="step_titles[]" placeholder="Step title...">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Step Description</label>
+              <textarea class="form-control" name="step_descriptions[]" rows="2" placeholder="Detailed description of this step..."></textarea>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-step ms-2" title="Remove Step">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('stepsContainer').insertAdjacentHTML('beforeend', stepHtml);
+    updateStepNumbers();
+  });
+  
+  // Remove step
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-step')) {
+      e.target.closest('.step-item').remove();
+      updateStepNumbers();
+    }
+  });
+  
+  // Update step numbers
+  function updateStepNumbers() {
+    const steps = document.querySelectorAll('.step-item');
+    steps.forEach((step, index) => {
+      const number = index + 1;
+      step.dataset.stepNumber = number;
+      step.querySelector('.step-number').textContent = number;
+    });
+    stepCounter = steps.length;
+  }
+  
+  // Delete measure function
+  window.deleteMeasure = function() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+  }
+  
+  // Form validation
+  document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+      e.preventDefault();
+      alert('Please enter a measure name.');
+      document.getElementById('name').focus();
+      return false;
+    }
+    
+    // Check if at least one step has a title
+    const stepTitles = document.querySelectorAll('input[name="step_titles[]"]');
+    let hasValidStep = false;
+    stepTitles.forEach(input => {
+      if (input.value.trim()) {
+        hasValidStep = true;
+      }
+    });
+    
+    if (!hasValidStep) {
+      e.preventDefault();
+      alert('Please add at least one step with a title.');
+      return false;
+    }
+  });
+});
+</script>
+{% endblock %}

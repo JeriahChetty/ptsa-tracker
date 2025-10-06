@@ -1,0 +1,49 @@
+# Azure deployment configuration for PTSA Tracker
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ptsa-tracker-config
+data:
+  FLASK_ENV: "production"
+  FLASK_APP: "app.py"
+  # Database will be configured via environment variables in Azure
+
+---
+# Resource group configuration
+resourceGroup:
+  name: "rg-ptsa-tracker"
+  location: "East US"
+
+# Container Registry
+containerRegistry:
+  name: "acrptsatracker"
+  sku: "Basic"
+  adminUserEnabled: true
+
+# App Service Plan
+appServicePlan:
+  name: "asp-ptsa-tracker"
+  sku: "B1"  # Basic tier - can upgrade as needed
+  kind: "Linux"
+
+# Web App
+webApp:
+  name: "ptsa-tracker-app"
+  kind: "app,linux,container"
+  properties:
+    siteConfig:
+      linuxFxVersion: "DOCKER|acrptsatracker.azurecr.io/ptsa-tracker:latest"
+      appSettings:
+        - name: "WEBSITES_ENABLE_APP_SERVICE_STORAGE"
+          value: "false"
+        - name: "DOCKER_REGISTRY_SERVER_URL"
+          value: "https://acrptsatracker.azurecr.io"
+        - name: "PORT"
+          value: "8000"
+
+# PostgreSQL Database (recommended for production)
+database:
+  name: "psql-ptsa-tracker"
+  sku: "B_Gen5_1"  # Basic tier
+  version: "13"
+  storage: "32768"  # 32GB

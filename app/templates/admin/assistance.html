@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block title %}Assistance Requests · Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Assistance Requests</h1>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+</div>
+
+{# ---------- EMAIL REMINDER SECTION ---------- #}
+<div class="card mb-4">
+  <div class="card-header bg-info text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-envelope me-2"></i>Send Measure Reminders
+    </h5>
+  </div>
+  <div class="card-body">
+    <p class="text-muted mb-3">Send targeted email reminders to companies about their assigned measures.</p>
+    
+    <form method="POST" action="{{ url_for('admin.send_measure_reminder') }}" id="reminderForm">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="reminder_company" class="form-label">Select Company</label>
+          <select class="form-select" id="reminder_company" name="company_id" required onchange="loadCompanyMeasures()">
+            <option value="">Choose a company...</option>
+            {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="reminder_measure" class="form-label">Select Measure (Optional)</label>
+          <select class="form-select" id="reminder_measure" name="measure_id">
+            <option value="">All measures</option>
+          </select>
+          <div class="form-text">Leave blank to send general reminder about all measures</div>
+        </div>
+        
+        <div class="col-12">
+          <label for="reminder_type" class="form-label">Reminder Type</label>
+          <select class="form-select" id="reminder_type" name="reminder_type" required onchange="updateReminderTemplate()">
+            <option value="">Select reminder type...</option>
+            <option value="start_measure">Start Measure - Encourage company to begin</option>
+            <option value="complete_measure">Complete Measure - Remind to finish</option>
+            <option value="overdue_measure">Overdue Measure - Urgent completion reminder</option>
+            <option value="general_progress">General Progress - Check on overall progress</option>
+            <option value="custom">Custom - Write your own message</option>
+          </select>
+        </div>
+        
+        <div class="col-12">
+          <label for="reminder_subject" class="form-label">Email Subject</label>
+          <input type="text" class="form-control" id="reminder_subject" name="subject" required 
+                 placeholder="Subject will be generated based on reminder type">
+        </div>
+        
+        <div class="col-12">
+          <label for="reminder_message" class="form-label">Message</label>
+          <textarea class="form-control" id="reminder_message" name="message" rows="6" required 
+                    placeholder="Message will be generated based on reminder type"></textarea>
+          <div class="form-text">You can customize the generated message or write your own</div>
+        </div>
+        
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="include_progress" name="include_progress" checked>
+            <label class="form-check-label" for="include_progress">
+              Include current progress summary in email
+            </label>
+          </div>
+        </div>
+        
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <button type="button" class="btn btn-outline-secondary me-2" onclick="previewEmail()">
+                <i class="fas fa-eye me-1"></i>Preview Email
+              </button>
+            </div>
+            <div>
+              <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">
+                <i class="fas fa-undo me-1"></i>Reset
+              </button>
+              <button type="submit" class="btn btn-info">
+                <i class="fas fa-paper-plane me-1"></i>Send Reminder
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ---------- OPEN REQUESTS ---------- #}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Open Requests</h2>
+
+    {% if not open_reqs %}
+      <div class="alert alert-info mb-0">No open assistance requests.</div>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Company</th>
+              <th scope="col">Measure</th>
+              <th scope="col" class="text-nowrap">Requested</th>
+              <th scope="col">Previous</th>
+              <th scope="col">Current</th>
+              <th scope="col">Requested by</th>
+              <th scope="col" class="w-25">Note</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in open_reqs %}
+              {% set a = r.assignment %}
+              {% set company = a.company if a else None %}
+              {% set measure = a.measure if a else None %}
+              {% set cur = (a.status if a else None) or 'Unknown' %}
+              <tr>
+                <td>{{ company.name if company else '—' }}</td>
+                <td>{{ measure.name if measure else '—' }}</td>
+                <td class="text-nowrap">
+                  {% set ts = r.requested_at or r.created_at %}
+                  {{ ts.strftime('%Y-%m-%d %H:%M') if ts else '—' }}
+                </td>
+                <td>
+                  {% set prev = r.prev_status or 'Not Started' %}
+                  <span class="badge bg-{{ status_class(prev) }}">{{ prev }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-{{ status_class(cur) }}">{{ cur }}</span>
+                </td>
+                <td>{{ r.requested_by.email if r.requested_by else '—' }}</td>
+                <td class="small">
+                  <div class="text-break">{{ r.decision_notes or '' }}</div>
+                </td>
+                <td class="text-end">
+                  <form method="post"
+                        action="{{ url_for('admin.assistance_decide', req_id=r.id) }}"
+                        class="d-inline">
+                    <input type="hidden" name="action" value="resolved">
+                    <input type="text"
+                           name="notes"
+                           class="form-control form-control-sm d-inline-block assist-note-width mb-1"
+                           placeholder="Optional notes">
+                    <div>
+                      <button type="submit" class="btn btn-success btn-sm">Mark Resolved</button>
+                    </div>
+                  </form>
+
+                  <form method="post"
+                        action="{{ url_for('admin.assistance_decide', req_id=r.id) }}"
+                        class="d-inline ms-2">
+                    <input type="hidden" name="action" value="not_resolved">
+                    <input type="text"
+                           name="notes"
+                           class="form-control form-control-sm d-inline-block assist-note-width mb-1"
+                           placeholder="Optional notes">
+                    <div>
+                      <button type="submit" class="btn btn-outline-secondary btn-sm">Not Resolved</button>
+                    </div>
+                  </form>
+
+                  <a class="btn btn-outline-primary btn-sm ms-2"
+                     href="{{ safe_url_for('admin.view_assignment', assignment_id=r.assignment_id) }}">
+                    Open
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ---------- RECENT DECISIONS (last 20) ---------- #}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Recent Decisions</h2>
+
+    {% if not recent %}
+      <div class="text-muted">No recent items.</div>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Company</th>
+              <th scope="col">Measure</th>
+              <th scope="col">Decision</th>
+              <th scope="col" class="text-nowrap">Decided</th>
+              <th scope="col">By</th>
+              <th scope="col" class="w-25">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recent %}
+              {% set a = r.assignment %}
+              <tr>
+                <td>{{ a.company.name if a and a.company else '—' }}</td>
+                <td>{{ a.measure.name if a and a.measure else '—' }}</td>
+                <td>
+                  {% set d = r.decision or 'open' %}
+                  <span class="badge bg-{{ 'success' if d == 'resolved' else ('secondary' if d == 'not_resolved' else 'warning') }}">
+                    {{ d.replace('_', ' ').title() }}
+                  </span>
+                </td>
+                <td class="text-nowrap">
+                  {{ r.decided_at.strftime('%Y-%m-%d %H:%M') if r.decided_at else '—' }}
+                </td>
+                <td>{{ r.decided_by.email if r.decided_by else '—' }}</td>
+                <td class="small text-break">{{ r.decision_notes or '' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ---------- EMAIL PREVIEW MODAL ---------- #}
+<div class="modal fade" id="emailPreviewModal" tabindex="-1" aria-labelledby="emailPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="emailPreviewModalLabel">Email Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong>To:</strong> <span id="preview_to"></span>
+        </div>
+        <div class="mb-3">
+          <strong>Subject:</strong> <span id="preview_subject"></span>
+        </div>
+        <div class="mb-3">
+          <strong>Message:</strong>
+          <div id="preview_message" class="border p-3 mt-2 bg-light"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-info" onclick="sendFromPreview()">Send Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Email reminder templates
+const reminderTemplates = {
+  start_measure: {
+    subject: "PTSA Tracker: Time to start your assigned measure - {measure_name}",
+    message: `Dear {company_name} Team,
+
+We hope this message finds you well. We're reaching out to remind you about an assigned improvement measure that's ready to begin.
+
+Measure: {measure_name}
+Status: Not Started
+Due Date: {due_date}
+
+This measure is designed to help improve your operations and we encourage you to start as soon as possible. Our team is here to support you throughout the implementation process.
+
+Please log into the PTSA Tracker system to:
+- Review the measure details and implementation steps
+- Begin working on the assigned tasks
+- Track your progress
+- Request assistance if needed
+
+If you have any questions or need support, please don't hesitate to reach out to us.
+
+Best regards,
+PTSA Administration Team`
+  },
+  
+  complete_measure: {
+    subject: "PTSA Tracker: Please complete your measure - {measure_name}",
+    message: `Dear {company_name} Team,
+
+We wanted to follow up on the progress of your assigned improvement measure.
+
+Measure: {measure_name}
+Current Status: {current_status}
+Due Date: {due_date}
+
+We notice that this measure is still in progress. To help you stay on track with your improvement goals, we'd like to encourage you to complete the remaining steps.
+
+Please log into the PTSA Tracker system to:
+- Review your current progress
+- Complete any remaining steps
+- Submit final documentation
+- Update the measure status
+
+If you're experiencing any challenges or need assistance, please use the "Request Assistance" feature in the system or contact us directly.
+
+Best regards,
+PTSA Administration Team`
+  },
+  
+  overdue_measure: {
+    subject: "URGENT: PTSA Tracker - Overdue measure requires attention - {measure_name}",
+    message: `Dear {company_name} Team,
+
+This is an urgent reminder regarding an overdue improvement measure.
+
+Measure: {measure_name}
+Current Status: {current_status}
+Due Date: {due_date} (OVERDUE)
+
+This measure is now past its due date and requires immediate attention. We understand that challenges can arise, and we're here to help you get back on track.
+
+Immediate Actions Required:
+- Log into the PTSA Tracker system
+- Review the measure requirements
+- Update your progress
+- Complete outstanding tasks
+- Request assistance if facing obstacles
+
+Please prioritize this measure and contact us if you need support or if there are extenuating circumstances causing the delay.
+
+Best regards,
+PTSA Administration Team`
+  },
+  
+  general_progress: {
+    subject: "PTSA Tracker: Progress check-in for {company_name}",
+    message: `Dear {company_name} Team,
+
+We hope you're making good progress on your improvement measures. This is a friendly check-in to see how things are going.
+
+We're committed to supporting your continuous improvement journey and want to ensure you have everything you need to succeed.
+
+Please take a moment to:
+- Log into the PTSA Tracker system
+- Review your assigned measures
+- Update your progress on any active measures
+- Request assistance if you're facing any challenges
+
+Your success is important to us, and we're here to help whenever you need support.
+
+Best regards,
+PTSA Administration Team`
+  }
+};
+
+// Load company measures when company is selected
+function loadCompanyMeasures() {
+  const companyId = document.getElementById('reminder_company').value;
+  const measureSelect = document.getElementById('reminder_measure');
+  
+  // Clear existing options except "All measures"
+  measureSelect.innerHTML = '<option value="">All measures</option>';
+  
+  if (!companyId) return;
+  
+  // Fetch measures for this company
+  fetch(`/admin/api/company/${companyId}/measures`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        data.measures.forEach(measure => {
+          const option = document.createElement('option');
+          option.value = measure.id;
+          option.textContent = `${measure.name} (${measure.status})`;
+          option.dataset.status = measure.status;
+          option.dataset.dueDate = measure.due_date;
+          measureSelect.appendChild(option);
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error loading measures:', error);
+    });
+}
+
+// Update reminder template based on selected type
+function updateReminderTemplate() {
+  const reminderType = document.getElementById('reminder_type').value;
+  const subjectField = document.getElementById('reminder_subject');
+  const messageField = document.getElementById('reminder_message');
+  
+  if (reminderType && reminderTemplates[reminderType]) {
+    const template = reminderTemplates[reminderType];
+    subjectField.value = template.subject;
+    messageField.value = template.message;
+  } else if (reminderType === 'custom') {
+    subjectField.value = 'PTSA Tracker: ';
+    messageField.value = 'Dear {company_name} Team,\n\n\n\nBest regards,\nPTSA Administration Team';
+  }
+}
+
+// Preview email before sending
+function previewEmail() {
+  const companySelect = document.getElementById('reminder_company');
+  const subject = document.getElementById('reminder_subject').value;
+  const message = document.getElementById('reminder_message').value;
+  
+  if (!companySelect.value) {
+    alert('Please select a company first');
+    return;
+  }
+  
+  const companyName = companySelect.options[companySelect.selectedIndex].text;
+  
+  // Update preview modal
+  document.getElementById('preview_to').textContent = companyName;
+  document.getElementById('preview_subject').textContent = subject.replace('{company_name}', companyName);
+  document.getElementById('preview_message').innerHTML = message.replace(/\n/g, '<br>').replace('{company_name}', companyName);
+  
+  // Show modal
+  new bootstrap.Modal(document.getElementById('emailPreviewModal')).show();
+}
+
+// Send email from preview
+function sendFromPreview() {
+  document.getElementById('reminderForm').submit();
+}
+
+// Reset form
+function resetForm() {
+  document.getElementById('reminderForm').reset();
+  document.getElementById('reminder_measure').innerHTML = '<option value="">All measures</option>';
+}
+
+// Form validation
+document.getElementById('reminderForm').addEventListener('submit', function(e) {
+  const companyId = document.getElementById('reminder_company').value;
+  const subject = document.getElementById('reminder_subject').value.trim();
+  const message = document.getElementById('reminder_message').value.trim();
+  
+  if (!companyId || !subject || !message) {
+    e.preventDefault();
+    alert('Please fill in all required fields');
+    return;
+  }
+  
+  // Confirm sending
+  if (!confirm('Are you sure you want to send this reminder email?')) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}
+
+

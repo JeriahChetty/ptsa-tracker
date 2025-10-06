@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_pagination %}
+
+{% block title %}Measure History · PTSA Tracker{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom-components.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Measure History</h1>
+    <div>
+      <a href="{{ url_for('admin.measure_history_export', **request.args) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Export
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter form -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h5 class="card-title mb-0">Filter</h5>
+    </div>
+    <div class="card-body">
+      <form action="{{ url_for('admin.measure_history') }}" method="get" class="row g-3">
+        <div class="col-md-3">
+          <label for="company_id" class="form-label">Company</label>
+          <select class="form-select" id="company_id" name="company_id">
+            <option value="">All Companies</option>
+            {% for c in companies %}
+            <option value="{{ c.id }}" {% if selected.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="measure_id" class="form-label">Measure</label>
+          <select class="form-select" id="measure_id" name="measure_id">
+            <option value="">All Measures</option>
+            {% for m in measures %}
+            <option value="{{ m.id }}" {% if selected.measure_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="status" class="form-label">Status</label>
+          <select class="form-select" id="status" name="status">
+            <option value="">All Statuses</option>
+            <option value="Not Started" {% if selected.status == "Not Started" %}selected{% endif %}>Not Started</option>
+            <option value="In Progress" {% if selected.status == "In Progress" %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if selected.status == "Completed" %}selected{% endif %}>Completed</option>
+            <option value="Needs Assistance" {% if selected.status == "Needs Assistance" %}selected{% endif %}>Needs Assistance</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="date_from" class="form-label">Date From</label>
+          <input type="date" class="form-control" id="date_from" name="date_from" value="{{ selected.date_from }}">
+        </div>
+        <div class="col-md-2">
+          <label for="date_to" class="form-label">Date To</label>
+          <input type="date" class="form-control" id="date_to" name="date_to" value="{{ selected.date_to }}">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+          <a href="{{ url_for('admin.measure_history') }}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Company</th>
+          <th>Measure</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Due Date</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td>{{ a.id }}</td>
+          <td>{{ a.company.name if a.company else "N/A" }}</td>
+          <td>{{ a.measure.name if a.measure else "N/A" }}</td>
+          <td><span class="badge bg-{{ status_class(a.status) }}">{{ a.status or "Unknown" }}</span></td>
+          <td>
+            {% if a.steps %}
+              {% set completed = a.steps|selectattr('is_completed')|list|length %}
+              {% set total = a.steps|length %}
+              {% set percentage = (completed / total * 100)|round(0, 'floor') if total > 0 else 0 %}
+              {% set p5 = ((percentage // 5) * 5)|int %}
+              <div class="progress progress-dashboard" aria-label="Completion progress">
+                <div class="progress-bar bg-success w-pct-{{ p5 }}"
+                     role="progressbar"
+                     data-valuenow="{{ percentage|int }}"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     title="{{ completed }}/{{ total }} step(s) complete">
+                  {{ completed }}/{{ total }}
+                </div>
+              </div>
+            {% else %}
+              <small class="text-muted">No steps</small>
+            {% endif %}
+          </td>
+          <td>{{ a.due_at.strftime('%Y-%m-%d') if a.due_at else "N/A" }}</td>
+          <td>{{ a.created_at.strftime('%Y-%m-%d') if a.created_at else "N/A" }}</td>
+          <td>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Actions
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">View Details</a></li>
+                <li><a class="dropdown-item" href="#">Edit Assignment</a></li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-3">No records found matching the criteria.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination %}
+    {{ render_pagination(pagination, 'admin.measure_history', {
+        'company_id': selected.company_id,
+        'measure_id': selected.measure_id,
+        'status': selected.status,
+        'date_from': selected.date_from,
+        'date_to': selected.date_to
+    }) }}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.progress-bar[data-valuenow]').forEach(el => {
+    const v = parseInt(el.getAttribute('data-valuenow'), 10);
+    el.setAttribute('aria-valuenow', Number.isFinite(v) ? String(v) : '0');
+  });
+});
+</script>
+{% endblock %}
+
+
+

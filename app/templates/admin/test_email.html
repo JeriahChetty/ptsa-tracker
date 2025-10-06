@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Test Email Notification · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="mb-0">Test Email Notification</h2>
+  <div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Send Test Email to Company</h5>
+  </div>
+  <div class="card-body">
+    <form method="POST">
+      <div class="mb-3">
+        <label for="company_id" class="form-label">Select Company</label>
+        <select class="form-select" id="company_id" name="company_id" required>
+          <option value="" disabled selected>Choose a company...</option>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">The email will be sent to all active users belonging to this company.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="subject" class="form-label">Subject</label>
+        <input type="text" class="form-control" id="subject" name="subject" 
+               placeholder="Test Email Subject" required>
+      </div>
+      
+      <div class="mb-3">
+        <label for="message" class="form-label">Message</label>
+        <textarea class="form-control" id="message" name="message" rows="5" 
+                  placeholder="Enter your test message here..." required></textarea>
+      </div>
+      
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">Send Test Email</button>
+      </div>
+    </form>
+  </div>
+  <div class="card-footer">
+    <div class="alert alert-info mb-0">
+      <p class="mb-0">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        This feature sends a test notification email to the selected company's users. 
+        Use this to verify that email notifications are working correctly.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <h4>Email Configuration Status</h4>
+  
+  {% if config.get('MAIL_SERVER') %}
+    <div class="alert alert-success">
+      <p class="mb-0"><strong>Email is configured</strong> with the following settings:</p>
+      <ul class="mb-0 mt-2">
+        <li>Server: {{ config.get('MAIL_SERVER') }}</li>
+        <li>Port: {{ config.get('MAIL_PORT') }}</li>
+        <li>Default Sender: {{ config.get('MAIL_DEFAULT_SENDER', 'Not set') }}</li>
+      </ul>
+    </div>
+  {% else %}
+    <div class="alert alert-warning">
+      <p class="mb-0">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Email is not configured.</strong> Test emails will be logged but not actually sent.
+      </p>
+      <p class="mb-0 mt-2">
+        To enable email, configure MAIL_SERVER, MAIL_PORT, and other email settings in your application config.
+      </p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

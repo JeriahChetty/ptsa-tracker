@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}Company Profile · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Company Profile</h1>
+    {% if not editing %}
+    <a href="{{ url_for('company.company_profile', edit=1) }}" class="btn btn-primary">Edit Profile</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      {% if editing %}
+      <!-- Edit Form -->
+      <form method="post" action="{{ url_for('company.company_profile') }}">
+        <div class="mb-3">
+          <label for="name" class="form-label">Company Name</label>
+          <input type="text" class="form-control" id="name" value="{{ company.name }}" disabled>
+          <div class="form-text">Company name cannot be changed. Contact an administrator for assistance.</div>
+        </div>
+        <div class="mb-3">
+          <label for="email" class="form-label">Registration Email</label>
+          <input type="email" class="form-control" id="email" value="{{ company.users[0].email if company.users else '' }}" disabled>
+          <div class="form-text">Email used to register the company.</div>
+        </div>
+        <div class="mb-3">
+          <label for="phone" class="form-label">Phone Number</label>
+          <input type="text" class="form-control" id="phone" name="phone" value="{{ company.phone or '' }}">
+        </div>
+        <div class="mb-3">
+          <label for="region" class="form-label">Region</label>
+          <input type="text" class="form-control" id="region" name="region" value="{{ company.region or '' }}">
+        </div>
+        <div class="mb-3">
+          <label for="industry_category" class="form-label">Industry Category</label>
+          <input type="text" class="form-control" id="industry_category" name="industry_category" value="{{ company.industry_category or '' }}">
+        </div>
+        <div class="mb-3">
+          <label for="tech_resources" class="form-label">Technical Resources</label>
+          <textarea class="form-control" id="tech_resources" name="tech_resources" rows="3">{{ company.tech_resources or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+          <label for="human_resources" class="form-label">Human Resources</label>
+          <textarea class="form-control" id="human_resources" name="human_resources" rows="3">{{ company.human_resources or '' }}</textarea>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="{{ url_for('company.company_profile') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+      {% else %}
+      <!-- View Mode -->
+      <dl class="row">
+        <dt class="col-sm-3">Company Name</dt>
+        <dd class="col-sm-9">{{ company.name }}</dd>
+        <dt class="col-sm-3">Registration Email</dt>
+        <dd class="col-sm-9">{{ company.users[0].email if company.users else '' }}</dd>
+        <dt class="col-sm-3">Phone Number</dt>
+        <dd class="col-sm-9">{{ company.phone or 'Not specified' }}</dd>
+        <dt class="col-sm-3">Region</dt>
+        <dd class="col-sm-9">{{ company.region or 'Not specified' }}</dd>
+        <dt class="col-sm-3">Industry Category</dt>
+        <dd class="col-sm-9">{{ company.industry_category or 'Not specified' }}</dd>
+        <dt class="col-sm-3">Technical Resources</dt>
+        <dd class="col-sm-9">{{ company.tech_resources or 'Not specified' }}</dd>
+        <dt class="col-sm-3">Human Resources</dt>
+        <dd class="col-sm-9">{{ company.human_resources or 'Not specified' }}</dd>
+      </dl>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not editing %}
+  <!-- Benchmarking Data Section -->
+  <div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Company Performance Data</h5>
+      {% if not request.args.get('edit_benchmarking') %}
+        <a href="{{ url_for('company.company_profile', edit_benchmarking=1) }}" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-edit me-1"></i>Update Performance Data
+        </a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% if request.args.get('edit_benchmarking') == '1' %}
+        <!-- Edit Benchmarking Form -->
+        <form method="post" action="{{ url_for('company.update_benchmarking') }}">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Update your company's performance metrics. This will create a new historical record.
+          </div>
+          
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="data_year" class="form-label">Data Year <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="data_year" name="data_year" 
+                       value="{{ request.form.get('data_year', current_year) }}" 
+                       min="2000" max="2050" required
+                       placeholder="e.g., 2024">
+                <div class="form-text">The year this data represents</div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <textarea class="form-control" id="notes" name="notes" rows="2" 
+                          placeholder="Any additional context about this data...">{{ request.form.get('notes', '') }}</textarea>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <!-- Financial Metrics -->
+            <div class="col-md-6">
+              <h6 class="text-primary mb-3">Financial Performance</h6>
+              <div class="mb-3">
+                <label for="turnover" class="form-label">Turnover</label>
+                <input type="text" class="form-control" id="turnover" name="turnover" 
+                       value="{{ request.form.get('turnover', '') }}" placeholder="e.g., R 12,500,000.00">
+              </div>
+            </div>
+
+            <!-- Production Metrics -->
+            <div class="col-md-6">
+              <h6 class="text-primary mb-3">Production Performance</h6>
+              <div class="mb-3">
+                <label for="tools_produced" class="form-label">Number of Tools Produced</label>
+                <input type="number" class="form-control" id="tools_produced" name="tools_produced" 
+                       value="{{ request.form.get('tools_produced', '') }}" placeholder="e.g., 15">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Delivery Performance -->
+            <div class="col-md-6">
+              <h6 class="text-primary mb-3">Delivery Performance</h6>
+              <div class="mb-3">
+                <label for="on_time_delivery" class="form-label">On Time Delivery</label>
+                <input type="text" class="form-control" id="on_time_delivery" name="on_time_delivery" 
+                       value="{{ request.form.get('on_time_delivery', '') }}" placeholder="e.g., 95%">
+              </div>
+            </div>
+
+            <!-- Export Performance -->
+            <div class="col-md-6">
+              <h6 class="text-primary mb-3">Export Performance</h6>
+              <div class="mb-3">
+                <label for="export_percentage" class="form-label">% of Export/T.O.</label>
+                <input type="text" class="form-control" id="export_percentage" name="export_percentage" 
+                       value="{{ request.form.get('export_percentage', '') }}" placeholder="e.g., 15%">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Human Resources -->
+            <div class="col-12">
+              <h6 class="text-primary mb-3">Human Resources</h6>
+              <div class="row">
+                <div class="col-md-2">
+                  <div class="mb-3">
+                    <label for="employees" class="form-label">Employees</label>
+                    <input type="number" class="form-control" id="employees" name="employees" 
+                           value="{{ request.form.get('employees', '') }}" placeholder="e.g., 55">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="mb-3">
+                    <label for="apprentices" class="form-label">Apprentices</label>
+                    <input type="number" class="form-control" id="apprentices" name="apprentices" 
+                           value="{{ request.form.get('apprentices', '') }}" placeholder="e.g., 8">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="mb-3">
+                    <label for="artisans" class="form-label">Artisans</label>
+                    <input type="number" class="form-control" id="artisans" name="artisans" 
+                           value="{{ request.form.get('artisans', '') }}" placeholder="e.g., 15">
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="mb-3">
+                    <label for="master_artisans" class="form-label">Master Artisans</label>
+                    <input type="number" class="form-control" id="master_artisans" name="master_artisans" 
+                           value="{{ request.form.get('master_artisans', '') }}" placeholder="e.g., 5">
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="mb-3">
+                    <label for="engineers" class="form-label">Engineers</label>
+                    <input type="number" class="form-control" id="engineers" name="engineers" 
+                           value="{{ request.form.get('engineers', '') }}" placeholder="e.g., 3">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i>Save Performance Data
+            </button>
+            <a href="{{ url_for('company.company_profile') }}" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      {% else %}
+        <!-- Display Benchmarking Data -->
+        {% set benchmark_data = company.benchmarks %}
+        {% if benchmark_data %}
+          <div class="row">
+            {% for benchmark in benchmark_data[:2] %}
+            <div class="col-md-6">
+              <div class="card border-{{ 'primary' if loop.first else 'success' }}">
+                <div class="card-header bg-{{ 'primary' if loop.first else 'success' }} text-white text-center">
+                  <h6 class="mb-0">{{ company.name }} - {{ benchmark.data_year }}
+                    {% if loop.first %}(Baseline){% else %}(Current){% endif %}</h6>
+                  <small>Entered by {{ benchmark.entered_by_role }} on {{ benchmark.created_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+                <div class="card-body p-0">
+                  <table class="table table-sm mb-0">
+                    <tbody>
+                      <tr class="table-{{ 'info' if loop.first else 'success' }}">
+                        <td class="fw-bold">Turnover</td>
+                        <td class="text-end">{{ benchmark.turnover or 'Not specified' }}</td>
+                      </tr>
+                      <tr>
+                        <td class="fw-bold">Number of tools produced</td>
+                        <td class="text-end">{{ benchmark.tools_produced or 'Not specified' }}</td>
+                      </tr>
+                      <tr class="table-{{ 'info' if loop.first else 'success' }}">
+                        <td class="fw-bold">On time delivery</td>
+                        <td class="text-end">{{ benchmark.on_time_delivery or 'Not specified' }}</td>
+                      </tr>
+                      <tr>
+                        <td class="fw-bold">% of export / T.O.</td>
+                        <td class="text-end">{{ benchmark.export_percentage or 'Not specified' }}</td>
+                      </tr>
+                      <tr class="table-{{ 'info' if loop.first else 'success' }}">
+                        <td class="fw-bold">Number of Employees</td>
+                        <td class="text-end">{{ benchmark.employees or 'Not specified' }}</td>
+                      </tr>
+                      <tr>
+                        <td class="fw-bold">Number of Apprentices</td>
+                        <td class="text-end">{{ benchmark.apprentices or 'Not specified' }}</td>
+                      </tr>
+                      <tr class="table-{{ 'info' if loop.first else 'success' }}">
+                        <td class="fw-bold">Number of Artisans</td>
+                        <td class="text-end">{{ benchmark.artisans or 'Not specified' }}</td>
+                      </tr>
+                      <tr>
+                        <td class="fw-bold">Number of Engineers</td>
+                        <td class="text-end">{{ benchmark.engineers or 'Not specified' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          {% if company.next_benchmarking_due %}
+            <div class="mt-3">
+              <div class="alert alert-warning">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <strong>Performance Update Due:</strong> {{ company.next_benchmarking_due.strftime('%Y-%m-%d') }}
+                <br><small>Please update your performance data to help track your company's progress.</small>
+              </div>
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No performance data available yet. Your admin will add baseline data, and you can add updates as your metrics change.
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">
+      <h5 class="card-title mb-0">Assigned Measures</h5>
+    </div>
+    <div class="card-body">
+      {% if assignments %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Measure</th>
+              <th>Status</th>
+              <th>Due Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for assignment in assignments %}
+            <tr>
+              <td>{{ assignment.measure.name }}</td>
+              <td><span class="badge bg-{{ status_class(assignment.status) }}">{{ assignment.status }}</span></td>
+              <td>{{ assignment.due_at.strftime('%Y-%m-%d') if assignment.due_at else 'Not set' }}</td>
+              <td>
+                <a href="{{ url_for('company.view_measure', measure_id=assignment.measure.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted">No measures have been assigned yet.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

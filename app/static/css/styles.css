@@ -1,0 +1,67 @@
+/* style.css */
+
+body {
+  background-color: #f8f9fa;
+}
+.card-title {
+  font-size: 1.1rem;
+}
+
+
+.progress-container {
+    height: 20px;
+}
+
+/* Drag-and-drop utility styles */
+.draggable-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    cursor: move;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+.draggable-item:hover {
+    background-color: #e9ecef;
+}
+.draggable-item.dragging {
+    opacity: 0.5;
+    background-color: #e2e6ea;
+}
+.drag-handle {
+    cursor: move;
+    padding-right: 10px;
+    color: #6c757d;
+}
+.drag-container {
+    min-height: 400px;
+    padding: 20px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+}
+.item-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.step-number {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    margin-right: 10px;
+}
+.action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+.hidden {
+    display: none;
+}
+
+/* Add other custom styles here */

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Company Benchmarking History · PTSA Tracker{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .stats-card {
+      border-left: 4px solid #007bff;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+    .filter-section {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Company Benchmarking History</h2>
+  <div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+    </a>
+    <a href="{{ url_for('admin.export_benchmarking_data') }}" class="btn btn-success ms-2">
+      <i class="fas fa-download me-1"></i>Export Data
+    </a>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+  <div class="col-md-2">
+    <div class="card stats-card">
+      <div class="card-body text-center">
+        <h3 class="text-primary mb-1">{{ stats.total_companies }}</h3>
+        <small class="text-muted">Total Companies</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card stats-card">
+      <div class="card-body text-center">
+        <h3 class="text-success mb-1">{{ stats.companies_with_data }}</h3>
+        <small class="text-muted">With Data</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card stats-card">
+      <div class="card-body text-center">
+        <h3 class="text-info mb-1">{{ stats.total_records }}</h3>
+        <small class="text-muted">Total Records</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card stats-card">
+      <div class="card-body text-center">
+        <h3 class="text-warning mb-1">{{ stats.earliest_year }} - {{ stats.latest_year }}</h3>
+        <small class="text-muted">Year Range</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card stats-card">
+      <div class="card-body text-center">
+        <h3 class="text-primary mb-1">{{ "%.1f"|format((stats.companies_with_data / stats.total_companies * 100) if stats.total_companies > 0 else 0) }}%</h3>
+        <small class="text-muted">Data Coverage</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-bar me-2"></i>Records by Year
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="yearDistributionChart" 
+                  data-year-labels="{{ year_distribution|map(attribute=0)|list|tojson|e }}"
+                  data-year-data="{{ year_distribution|map(attribute=1)|list|tojson|e }}"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-pie me-2"></i>Data Entry Sources
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="entrySourceChart"
+                  data-admin-count="{{ (benchmarks|selectattr('entered_by_role', 'equalto', 'admin')|list|length) }}"
+                  data-company-count="{{ (benchmarks|selectattr('entered_by_role', 'equalto', 'company')|list|length) }}"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-section">
+  <form method="get" class="row g-3">
+    <div class="col-md-4">
+      <label for="company" class="form-label">Company</label>
+      <select class="form-select" id="company" name="company">
+        <option value="">All Companies</option>
+        {% for company in all_companies %}
+          <option value="{{ company.name }}" {% if filters.company == company.name %}selected{% endif %}>
+            {{ company.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="year" class="form-label">Year</label>
+      <select class="form-select" id="year" name="year">
+        <option value="">All Years</option>
+        {% for year in all_years %}
+          <option value="{{ year }}" {% if filters.year == year|string %}selected{% endif %}>
+            {{ year }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="sort" class="form-label">Sort By</label>
+      <select class="form-select" id="sort" name="sort">
+        <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Year (Newest First)</option>
+        <option value="year_asc" {% if filters.sort == 'year_asc' %}selected{% endif %}>Year (Oldest First)</option>
+        <option value="company_asc" {% if filters.sort == 'company_asc' %}selected{% endif %}>Company (A-Z)</option>
+        <option value="company_desc" {% if filters.sort == 'company_desc' %}selected{% endif %}>Company (Z-A)</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">&nbsp;</label>
+      <div>
+        <button type="submit" class="btn btn-primary w-100">Filter</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Data Table -->
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">
+      <i class="fas fa-table me-2"></i>Benchmarking Records ({{ benchmarks|length }})
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    {% if benchmarks %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Company</th>
+              <th>Year</th>
+              <th>Turnover</th>
+              <th>Tools Produced</th>
+              <th>On-Time Delivery</th>
+              <th>Export %</th>
+              <th>Employees</th>
+              <th>Entered By</th>
+              <th>Date Added</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for benchmark in benchmarks %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('admin.company_profile', company_id=benchmark.company.id) }}" 
+                     class="text-decoration-none fw-semibold">
+                    {{ benchmark.company.name }}
+                  </a>
+                </td>
+                <td>
+                  <span class="badge bg-primary">{{ benchmark.data_year }}</span>
+                </td>
+                <td>{{ benchmark.turnover or '-' }}</td>
+                <td>{{ benchmark.tools_produced or '-' }}</td>
+                <td>{{ benchmark.on_time_delivery or '-' }}</td>
+                <td>{{ benchmark.export_percentage or '-' }}</td>
+                <td>{{ benchmark.employees or '-' }}</td>
+                <td>
+                  <span class="badge bg-{{ 'success' if benchmark.entered_by_role == 'admin' else 'info' }}">
+                    {{ benchmark.entered_by_role|title }}
+                  </span>
+                  {% if benchmark.entered_by %}
+                    <br><small class="text-muted">{{ benchmark.entered_by.email }}</small>
+                  {% endif %}
+                </td>
+                <td>
+                  <small>{{ benchmark.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                </td>
+                <td>
+                  <a href="{{ url_for('admin.company_profile', company_id=benchmark.company.id) }}" 
+                     class="btn btn-sm btn-outline-primary" title="View Company">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No benchmarking data found</h5>
+        <p class="text-muted">Try adjusting your filters or add some company data first.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ url_for('static', filename='js/benchmarking-charts.js') }}"></script>
+{% endblock %}

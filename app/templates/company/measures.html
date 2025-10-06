@@ -1,0 +1,25 @@
+<div class="filter-controls mb-4">
+    <h5>Sort Measures By:</h5>
+    <div class="btn-group">
+        <a href="{{ url_for('company.view_measures', sort_by='order', direction='asc') }}" 
+           class="btn btn-sm {{ 'btn-primary' if sort_by == 'order' and direction == 'asc' else 'btn-outline-primary' }}">
+            Default Order
+        </a>
+        <a href="{{ url_for('company.view_measures', sort_by='priority', direction='desc') }}" 
+           class="btn btn-sm {{ 'btn-primary' if sort_by == 'priority' and direction == 'desc' else 'btn-outline-primary' }}">
+            Priority (High to Low)
+        </a>
+        <a href="{{ url_for('company.view_measures', sort_by='start_date', direction='asc') }}" 
+           class="btn btn-sm {{ 'btn-primary' if sort_by == 'start_date' and direction == 'asc' else 'btn-outline-primary' }}">
+            Start Date (Earliest)
+        </a>
+        <a href="{{ url_for('company.view_measures', sort_by='end_date', direction='asc') }}" 
+           class="btn btn-sm {{ 'btn-primary' if sort_by == 'end_date' and direction == 'asc' else 'btn-outline-primary' }}">
+            Due Date (Earliest)
+        </a>
+        <a href="{{ url_for('company.view_measures', sort_by='duration', direction='asc') }}" 
+           class="btn btn-sm {{ 'btn-primary' if sort_by == 'duration' and direction == 'asc' else 'btn-outline-primary' }}">
+            Duration (Shortest)
+        </a>
+    </div>
+</div>
