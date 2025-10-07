@@ -16,21 +16,21 @@ services:
         value: /app
       - key: PORT
         value: 10000
-      # Email Configuration (matching config.py)
+      # Email Configuration (matching your image)
       - key: MAIL_SERVER
-        value: smtp.gmail.com
+        value: mail.ptsa.co.za
       - key: MAIL_PORT
         value: 587
       - key: MAIL_USE_TLS
-        value: true
+        value: false
       - key: MAIL_USE_SSL
         value: false
       - key: MAIL_USERNAME
         value: info@ptsa.co.za
       - key: MAIL_PASSWORD
-        value: your-app-password-here
+        value: wqMvrJm4VZp
       - key: MAIL_DEFAULT_SENDER
-        value: PTSA Tracker <info@ptsa.co.za>
+        value: info@ptsa.co.za
       # Upload settings
       - key: UPLOAD_FOLDER
         value: /app/uploads
