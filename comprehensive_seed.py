@@ -23,35 +23,13 @@ from werkzeug.security import generate_password_hash
 def comprehensive_seed():
     print("🌱 Starting comprehensive database seeding...")
     
-    # Create the instance directory if it doesn't exist
-    instance_dir = project_root / "instance"
-    instance_dir.mkdir(exist_ok=True)
-    
-    # Set specific database paths
-    dev_db_path = instance_dir / "ptsa_dev.db"
-    prod_db_path = instance_dir / "ptsa.db"
-    
-    print(f"📍 Target database paths:")
-    print(f"   Dev: {dev_db_path}")
-    print(f"   Prod: {prod_db_path}")
-    
-    # Remove existing database files
-    for db_path in [dev_db_path, prod_db_path]:
-        if db_path.exists():
-            db_path.unlink()
-            print(f"🗑️ Removed existing database: {db_path}")
-    
-    # Force environment variables to ensure proper database location
-    os.environ['FLASK_ENV'] = 'development'
-    os.environ['DATABASE_URL'] = f'sqlite:///{dev_db_path.absolute()}'
-    
-    # Create app with specific config
+    # Create app with current environment (don't override)
     app = create_app()
     
-    # Override database URI to ensure file creation
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{dev_db_path.absolute()}'
+    print(f"📍 Current environment: {os.environ.get('FLASK_ENV', 'development')}")
+    print(f"📍 Database URL: {os.environ.get('DATABASE_URL', 'Not set')}")
     
-    print(f"🏗️ Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    print(f"🏗️ Using current database configuration")
     
     with app.app_context():
         # Create all tables
