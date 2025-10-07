@@ -1812,3 +1812,109 @@ def seed_data_endpoint():
         return redirect(url_for("admin.dashboard"))
 
 
+@admin_bp.route("/companies/export-benchmarking-data")
+@login_required
+def export_benchmarking_data():
+    """Export benchmarking data as CSV"""
+    if getattr(current_user, "role", "") != "admin":
+        abort(403)
+    
+    from flask import Response
+    import csv
+    import io
+    
+    # Get all benchmarking data
+    benchmarks = db.session.query(CompanyBenchmark).join(Company).order_by(
+        CompanyBenchmark.data_year.desc(),
+        Company.name
+    ).all()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'Company', 'Year', 'Revenue', 'Employees', 'Industry',
+        'Created Date', 'Updated Date'
+    ])
+    
+    # Write data
+    for benchmark in benchmarks:
+        writer.writerow([
+            benchmark.company.name,
+            benchmark.data_year,
+            benchmark.revenue or '',
+            benchmark.employees or '',
+            benchmark.industry or '',
+            benchmark.created_at.strftime('%Y-%m-%d %H:%M:%S') if benchmark.created_at else '',
+            benchmark.updated_at.strftime('%Y-%m-%d %H:%M:%S') if benchmark.updated_at else ''
+        ])
+    
+    # Create response
+    output.seek(0)
+    response = Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=benchmarking_data.csv'}
+    )
+    
+    return response
+
+
+@admin_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def admin_profile():
+    """Admin user profile management"""
+    if getattr(current_user, "role", "") != "admin":
+        abort(403)
+    
+    if request.method == "POST":
+        action = request.form.get("action")
+        
+        if action == "update_profile":
+            # Update basic profile info
+            current_user.first_name = request.form.get("first_name", "").strip() or None
+            current_user.last_name = request.form.get("last_name", "").strip() or None
+            current_user.phone = request.form.get("phone", "").strip() or None
+            
+            db.session.commit()
+            flash("Profile updated successfully.", "success")
+            return redirect(url_for("admin.admin_profile"))
+        
+        elif action == "change_password":
+            # Handle password change
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            
+            if not current_password or not new_password:
+                flash("Current password and new password are required.", "danger")
+                return redirect(url_for("admin.admin_profile", edit=1))
+            
+            # Verify current password
+            from werkzeug.security import check_password_hash, generate_password_hash
+            if not check_password_hash(current_user.password_hash, current_password):
+                flash("Current password is incorrect.", "danger")
+                return redirect(url_for("admin.admin_profile", edit=1))
+            
+            if new_password != confirm_password:
+                flash("New passwords do not match.", "danger")
+                return redirect(url_for("admin.admin_profile", edit=1))
+            
+            if len(new_password) < 6:
+                flash("New password must be at least 6 characters long.", "danger")
+                return redirect(url_for("admin.admin_profile", edit=1))
+            
+            # Update password
+            current_user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            flash("Password changed successfully.", "success")
+            return redirect(url_for("admin.admin_profile"))
+    
+    # Check if edit mode is requested
+    editing = request.args.get('edit', '0') == '1'
+    
+    return render_template("admin/admin_profile.html", user=current_user, editing=editing)
+
+
