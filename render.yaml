@@ -14,8 +14,6 @@ services:
         value: sqlite:///app/instance/ptsa.db
       - key: PYTHONPATH
         value: /app
-      - key: PORT
-        value: 10000
       # Email Configuration (matching your image)
       - key: MAIL_SERVER
         value: mail.ptsa.co.za
@@ -34,8 +32,5 @@ services:
       # Upload settings
       - key: UPLOAD_FOLDER
         value: /app/uploads
-    healthCheckPath: /
-    healthcheckTimeout: 100
-    restartPolicyType: ON_FAILURE
-    restartPolicyMaxRetries: 10
+    healthCheckPath: /health
     autoDeploy: true
