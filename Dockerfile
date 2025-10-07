@@ -36,4 +36,4 @@ EXPOSE 10000
 
 # Run database initialization and then start the app
 CMD python migrate_to_postgres.py && \
-    gunicorn --bind 0.0.0.0:10000 --workers 2 --timeout 120 app:app
+    gunicorn --bind 0.0.0.0:10000 --workers 2 --timeout 120 wsgi:app
