@@ -19,11 +19,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/instance /app/logs
 
-# Initialize database and create admin user
-RUN python -c "from app import create_app; from app.extensions import db; from app.models import User; from werkzeug.security import generate_password_hash; app = create_app(); app.app_context().push(); db.create_all(); admin = User.query.filter_by(email='admin@ptsa.co.za').first(); admin or (lambda: [db.session.add(User(email='admin@ptsa.co.za', password=generate_password_hash('admin123'), role='admin', is_active=True)), db.session.commit(), print('Admin user created')])(); print('Database initialized')"
+# Initialize database during build
+RUN python init_db.py
 
 # Expose port (Render uses port 10000)
 EXPOSE 10000
 
-# Run application with Render's port
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT --workers 2 --worker-class sync --timeout 120 --log-level info wsgi:app"]
+# Run application directly with gunicorn (no startup script)
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --worker-class sync --timeout 120 --log-level info wsgi:app
