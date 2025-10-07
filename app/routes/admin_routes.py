@@ -1779,13 +1779,8 @@ def update_company_benchmarking(company_id):
         flash(f"An error occurred: {str(e)}", "danger")
     
     return redirect(url_for("admin.company_profile", company_id=company_id))
-    download_name=f"company_benchmarking_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
 
-# ---------------------------------------------------------------------------
-# HTTP-Based Seeding Endpoint
-# ---------------------------------------------------------------------------
+
 @admin_bp.route("/seed-data", methods=["GET", "POST"])
 @login_required
 def seed_data_endpoint():
