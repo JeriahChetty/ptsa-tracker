@@ -81,8 +81,12 @@ def create_app(config_name="production"):
     app.register_blueprint(main_bp)
     
     # Register health check blueprint
-    from health_check import health_bp
-    app.register_blueprint(health_bp)
+    try:
+        from health_check import health_bp
+        app.register_blueprint(health_bp)
+    except ImportError:
+        # Health check blueprint is optional
+        pass
     
     return app
 
