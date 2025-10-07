@@ -91,6 +91,13 @@ def create_app(config_name="production"):
         }
         return status_map.get(status, 'secondary')
     
+    # Register template globals for common functions
+    @app.template_global()
+    def moment():
+        """Make datetime available in templates"""
+        from datetime import datetime
+        return datetime.utcnow()
+    
     # Add health check route
     @app.route('/health')
     def health_check():

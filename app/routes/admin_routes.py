@@ -1429,6 +1429,7 @@ def test_company_email():
 @login_required
 def admin_notifications():
     """View notifications for admin with ability to resolve assistance requests."""
+    from datetime import datetime, timedelta
     
     # Get all UNREAD notifications related to assistance requests
     assistance_notifications = (
@@ -1456,10 +1457,47 @@ def admin_notifications():
         .all()
     )
     
+    # Get overdue assignments for the overdue section
+    now = datetime.utcnow()
+    overdue_assignments = (
+        MeasureAssignment.query
+        .filter(
+            MeasureAssignment.due_at < now,
+            MeasureAssignment.status != "Completed"
+        )
+        .options(
+            joinedload(MeasureAssignment.company),
+            joinedload(MeasureAssignment.measure)
+        )
+        .order_by(MeasureAssignment.due_at.asc())
+        .limit(10)
+        .all()
+    )
+    
+    # Get upcoming assignments (due within next 14 days)
+    future_date = now + timedelta(days=14)
+    upcoming_assignments = (
+        MeasureAssignment.query
+        .filter(
+            MeasureAssignment.due_at >= now,
+            MeasureAssignment.due_at <= future_date,
+            MeasureAssignment.status != "Completed"
+        )
+        .options(
+            joinedload(MeasureAssignment.company),
+            joinedload(MeasureAssignment.measure)
+        )
+        .order_by(MeasureAssignment.due_at.asc())
+        .limit(10)
+        .all()
+    )
+    
     return render_template(
         "admin/admin_notifications.html",
         assistance_notifications=assistance_notifications,
-        other_notifications=other_notifications
+        other_notifications=other_notifications,
+        overdue_assignments=overdue_assignments,
+        upcoming_assignments=upcoming_assignments
     )
 
 @admin_bp.route("/notifications/<int:notification_id>/resolve", methods=["POST"])
@@ -1608,44 +1646,6 @@ def toggle_user_status(user_id):
     user = User.query.get_or_404(user_id)
     
     # Only admins can toggle status and can't deactivate themselves
-    if getattr(current_user, "role", "") != "admin" or user.id == current_user.id:
-        flash("You don't have permission to perform this action.", "danger")
-        return redirect(url_for("admin.companies"))
-    
-    user.is_active = not user.is_active
-    db.session.commit()
-    
-    status = "activated" if user.is_active else "deactivated"
-    flash(f"User {user.email} has been {status}.", "success")
-    
-    # Redirect back to the company profile
-    if user.company_id:
-        return redirect(url_for("admin.company_profile", company_id=user.company_id))
-    else:
-        return redirect(url_for("admin.users"))
-
-@admin_bp.route("/companies/<int:company_id>/add-user", methods=["GET", "POST"])
-@login_required
-def add_company_user(company_id):
-    company = Company.query.get_or_404(company_id)
-    
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "").strip()
-        role = request.form.get("role", "company").strip()
-        
-        if not email or not password:
-            flash("Email and password are required.", "warning")
-            return render_template("admin/add_company_user.html", company=company)
-        
-        # Check if user already exists
-        if User.query.filter_by(email=email).first():
-            flash("A user with this email already exists.", "warning")
-            return render_template("admin/add_company_user.html", company=company)
-        
-        # Create new user
-        user = User(
-            email=email,
             password=generate_password_hash(password),
             role=role,
             is_active=True,
