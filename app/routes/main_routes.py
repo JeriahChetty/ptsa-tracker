@@ -17,5 +17,11 @@ def index():
 
 @main_bp.route('/health')
 def health_check():
-    """Health check endpoint for container monitoring."""
-    return {"status": "healthy", "app": "PTSA Tracker"}, 200
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connectivity
+        from app.extensions import db
+        db.session.execute(db.text('SELECT 1'))
+        return {'status': 'healthy', 'database': 'connected'}, 200
+    except Exception as e:
+        return {'status': 'unhealthy', 'error': str(e)}, 500

@@ -580,120 +580,6 @@ def company_benchmarking_history():
         }
     )
 
-
-@admin_bp.route("/companies/benchmarking-history/export", methods=["GET"])
-@login_required
-def export_benchmarking_data():
-    """Export benchmarking data to Excel with same filters as history view."""
-    from app.models import CompanyBenchmark
-    from sqlalchemy import func
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
-    from io import BytesIO
-    from datetime import datetime
-    
-    # Get filter parameters (same as history view)
-    company_filter = request.args.get("company", "").strip()
-    year_filter = request.args.get("year", "").strip()
-    sort_by = request.args.get("sort", "year_desc")
-    
-    # Base query
-    query = db.session.query(CompanyBenchmark).join(Company)
-    
-    # Apply filters
-    if company_filter:
-        query = query.filter(Company.name.ilike(f"%{company_filter}%"))
-    
-    if year_filter:
-        try:
-            year_int = int(year_filter)
-            query = query.filter(CompanyBenchmark.data_year == year_int)
-        except ValueError:
-            pass
-    
-    # Apply sorting
-    if sort_by == "company_asc":
-        query = query.order_by(Company.name.asc(), CompanyBenchmark.data_year.desc())
-    elif sort_by == "company_desc":
-        query = query.order_by(Company.name.desc(), CompanyBenchmark.data_year.desc())
-    elif sort_by == "year_asc":
-        query = query.order_by(CompanyBenchmark.data_year.asc(), Company.name.asc())
-    else:  # year_desc (default)
-        query = query.order_by(CompanyBenchmark.data_year.desc(), Company.name.asc())
-    
-    # Execute query
-    benchmarks = query.all()
-    
-    # Create Excel workbook
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Benchmarking Data"
-    
-    # Define styles
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Headers
-    headers = [
-        "Company", "Year", "Revenue (€)", "Employees", "Apprentices", 
-        "Skilled Workers", "Master Artisans", "Engineers", "Export %", 
-        "On-Time Delivery", "Entered By", "Entry Date", "Notes"
-    ]
-    
-    # Write headers
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_alignment
-    
-    # Write data
-    for row, benchmark in enumerate(benchmarks, 2):
-        ws.cell(row=row, column=1, value=benchmark.company.name)
-        ws.cell(row=row, column=2, value=benchmark.data_year)
-        ws.cell(row=row, column=3, value=benchmark.revenue)
-        ws.cell(row=row, column=4, value=benchmark.employees)
-        ws.cell(row=row, column=5, value=benchmark.apprentices)
-        ws.cell(row=row, column=6, value=benchmark.skilled_workers)
-        ws.cell(row=row, column=7, value=benchmark.master_artisans)
-        ws.cell(row=row, column=8, value=benchmark.engineers)
-        ws.cell(row=row, column=9, value=benchmark.export_percentage)
-        ws.cell(row=row, column=10, value=benchmark.on_time_delivery)
-        ws.cell(row=row, column=11, value=benchmark.entered_by.email if benchmark.entered_by else "N/A")
-        ws.cell(row=row, column=12, value=benchmark.created_at.strftime('%Y-%m-%d %H:%M') if benchmark.created_at else "N/A")
-        ws.cell(row=row, column=13, value=benchmark.notes or "")
-    
-    # Auto-adjust column widths
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = min(max_length + 2, 50)
-        ws.column_dimensions[column_letter].width = adjusted_width
-    
-    # Save to BytesIO
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
-    # Generate filename
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"benchmarking_data_{timestamp}.xlsx"
-    
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Notification Settings
 # ---------------------------------------------------------------------------
@@ -726,86 +612,6 @@ def notification_settings():
 
     current_hhmm = f"{cfg.send_hour_utc:02d}:{cfg.send_minute_utc:02d}"
     return render_template("admin/notification_settings.html", cfg=cfg, current_hhmm=current_hhmm)
-
-
-# ---------------------------------------------------------------------------
-# Admin Profile Management
-# ---------------------------------------------------------------------------
-@admin_bp.route("/profile", methods=["GET", "POST"])
-@login_required
-def admin_profile():
-    """Admin profile page for editing login details"""
-    if getattr(current_user, "role", "") != "admin":
-        abort(403)
-    
-    # Check if we're in edit mode
-    editing = request.args.get('edit') == '1' or request.method == "POST"
-    
-    if request.method == "POST":
-        action = request.form.get("action")
-        if action == "update_profile":
-            try:
-                # Get form data
-                new_email = request.form.get("email", "").strip()
-                current_password = request.form.get("current_password", "")
-                new_password = request.form.get("new_password", "")
-                confirm_password = request.form.get("confirm_password", "")
-                
-                # Validate email
-                if not new_email:
-                    flash("Email is required.", "danger")
-                    return redirect(url_for("admin.admin_profile", edit=1))
-                
-                # Check if email is already taken by another user
-                existing_user = User.query.filter(User.email == new_email, User.id != current_user.id).first()
-                if existing_user:
-                    flash("This email is already in use by another user.", "danger")
-                    return redirect(url_for("admin.admin_profile", edit=1))
-                
-                # Check if we need current password (email change or password change)
-                email_changed = new_email != current_user.email
-                password_changed = bool(new_password)
-                
-                if (email_changed or password_changed) and not current_password:
-                    flash("Current password is required to make changes.", "danger")
-                    return redirect(url_for("admin.admin_profile", edit=1))
-                
-                # Verify current password if provided
-                if current_password:
-                    from werkzeug.security import check_password_hash
-                    if not check_password_hash(current_user.password, current_password):
-                        flash("Current password is incorrect.", "danger")
-                        return redirect(url_for("admin.admin_profile", edit=1))
-                
-                # If changing password, validate new password
-                if new_password:
-                    # Validate new password
-                    if len(new_password) < 6:
-                        flash("New password must be at least 6 characters long.", "danger")
-                        return redirect(url_for("admin.admin_profile", edit=1))
-                    
-                    if new_password != confirm_password:
-                        flash("New password and confirmation do not match.", "danger")
-                        return redirect(url_for("admin.admin_profile", edit=1))
-                    
-                    # Update password
-                    from werkzeug.security import generate_password_hash
-                    current_user.password = generate_password_hash(new_password)
-                
-                # Update email
-                current_user.email = new_email
-                
-                db.session.commit()
-                flash("Profile updated successfully.", "success")
-                
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error updating admin profile: {str(e)}")
-                flash(f"An error occurred: {str(e)}", "danger")
-            
-            return redirect(url_for("admin.admin_profile"))
-    
-    return render_template("admin/admin_profile.html", user=current_user, editing=editing)
 
 
 # ---------------------------------------------------------------------------
@@ -1973,6 +1779,9 @@ def update_company_benchmarking(company_id):
         flash(f"An error occurred: {str(e)}", "danger")
     
     return redirect(url_for("admin.company_profile", company_id=company_id))
+    download_name=f"company_benchmarking_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # ---------------------------------------------------------------------------
 # HTTP-Based Seeding Endpoint

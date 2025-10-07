@@ -25,6 +25,22 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'noreply@ptsa-tracker.com'
 
+    # Database configuration with PostgreSQL support for production
+    if os.environ.get('DATABASE_URL'):
+        # Production database (PostgreSQL on Render)
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+    else:
+        # Development database (SQLite)
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(basedir, 'instance', 'ptsa.db')}"
+    
+    # Ensure PostgreSQL connection is properly configured
+    if SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 10,
+            'pool_recycle': 60,
+            'pool_pre_ping': True
+        }
+
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True

@@ -79,7 +79,6 @@
                             </a>
                             <ul class="dropdown-menu">
                                 {% if current_user.role == 'admin' %}
-                                <li><a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}">Profile</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('admin.notification_settings') }}">Settings</a></li>
                                 {% elif current_user.role == 'company' %}
                                 <li><a class="dropdown-item" href="{{ url_for('company.company_profile') }}">Profile</a></li>

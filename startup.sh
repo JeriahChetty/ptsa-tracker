@@ -24,11 +24,15 @@ python deploy_db.py
 
 # Start the application with Gunicorn
 echo "Starting web server..."
-exec gunicorn --bind 0.0.0.0:${PORT:-5000} \
+exec gunicorn --bind 0.0.0.0:${PORT:-8000} \
               --workers 2 \
               --worker-class sync \
+              --worker-connections 1000 \
+              --max-requests 1000 \
+              --max-requests-jitter 100 \
               --timeout 120 \
+              --keepalive 5 \
               --log-level info \
               --access-logfile - \
               --error-logfile - \
-              wsgi:app
+              app:create_app\(\)
