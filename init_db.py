@@ -46,10 +46,9 @@ def init_database():
         config = NotificationConfig.query.first()
         if not config:
             config = NotificationConfig(
-                overdue_notification_days=7,
-                reminder_notification_days=3,
-                email_enabled=True,
-                admin_email='info@ptsa.co.za'
+                lead_days=7,
+                send_hour_utc=8,
+                send_minute_utc=0
             )
             db.session.add(config)
             print("✅ Notification configuration created")
