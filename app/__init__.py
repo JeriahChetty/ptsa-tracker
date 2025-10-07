@@ -4,7 +4,6 @@ from email.message import EmailMessage
 import smtplib
 import logging
 import os
-from pathlib import Path
 
 from flask import Flask, redirect, url_for, render_template, request, flash, session
 from werkzeug.routing import BuildError
@@ -23,12 +22,6 @@ migrate = Migrate()
 def create_app(config_name="production"):
     app = Flask(__name__)
     
-    # Configure logging first
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
     # Configuration
     if config_name is None:
         config_name = os.getenv('FLASK_ENV', 'development')
@@ -36,13 +29,6 @@ def create_app(config_name="production"):
     # Import config classes
     from app.config import config
     app.config.from_object(config.get(config_name, config['development']))
-    
-    # Ensure instance folder exists
-    try:
-        instance_dir = Path(app.instance_path)
-        instance_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        app.logger.warning(f"Could not create instance directory: {e}")
     
     # Initialize extensions
     db.init_app(app)
@@ -59,10 +45,30 @@ def create_app(config_name="production"):
         from app.models import User
         return User.query.get(int(user_id))
     
-    # Initialize mail if configured
-    if app.config.get('MAIL_SERVER'):
-        mail.init_app(app)
-            
+    # Add template functions
+    @app.template_global()
+    def safe_url_for(endpoint, **values):
+        """Safe URL generation that handles missing routes gracefully"""
+        try:
+            from flask import url_for
+            return url_for(endpoint, **values)
+        except Exception:
+            # Fallback to a safe default
+            if endpoint == 'index':
+                return '/'
+            return '#'
+    
+    @app.template_global()
+    def status_class(status):
+        status_map = {
+            'Not Started': 'secondary',
+            'In Progress': 'primary',
+            'Completed': 'success',
+            'Needs Assistance': 'danger',
+            'On Hold': 'warning'
+        }
+        return status_map.get(status, 'secondary')
+    
     # Register blueprints
     from app.routes.auth_routes import auth_bp
     from app.routes.admin_routes import admin_bp
@@ -77,39 +83,6 @@ def create_app(config_name="production"):
     # Register health check blueprint
     from health_check import health_bp
     app.register_blueprint(health_bp)
-    
-    # Register template filters
-    @app.template_filter('status_class')
-    def status_class(status):
-        """Convert status to Bootstrap CSS class"""
-        status_map = {
-            'Not Started': 'secondary',
-            'In Progress': 'primary', 
-            'Completed': 'success',
-            'Needs Assistance': 'danger',
-            'On Hold': 'warning'
-        }
-        return status_map.get(status, 'secondary')
-    
-    # Register template globals for common functions
-    @app.template_global()
-    def moment():
-        """Make datetime available in templates"""
-        from datetime import datetime
-        return datetime.utcnow()
-    
-    # Add health check route
-    @app.route('/health')
-    def health_check():
-        """Health check endpoint for monitoring"""
-        try:
-            # Test database connectivity
-            from app.extensions import db
-            db.session.execute(db.text('SELECT 1'))
-            return {'status': 'healthy', 'database': 'connected'}, 200
-        except Exception as e:
-            app.logger.error(f"Health check failed: {e}")
-            return {'status': 'unhealthy', 'error': str(e)}, 500
     
     return app
 

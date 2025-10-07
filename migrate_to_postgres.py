@@ -21,8 +21,12 @@ def init_postgres_db():
         sys.path.insert(0, str(project_root))
         
         # Import app after path setup
-        from wsgi import app
+        from app import create_app
         from app.extensions import db
+        from comprehensive_seed import comprehensive_seed
+        
+        # Create app
+        app = create_app()
         
         with app.app_context():
             logger.info("📋 Creating database tables...")
@@ -33,27 +37,12 @@ def init_postgres_db():
             from app.models import User, Company
             if User.query.first() is None:
                 logger.info("🌱 No existing data found, running comprehensive seed...")
-                try:
-                    from comprehensive_seed import comprehensive_seed
-                    success = comprehensive_seed()
-                    if success:
-                        logger.info("✅ Comprehensive seeding completed successfully!")
-                    else:
-                        logger.error("❌ Comprehensive seeding failed")
-                        return False
-                except ImportError:
-                    logger.warning("No comprehensive_seed module found, creating basic admin user...")
-                    from werkzeug.security import generate_password_hash
-                    
-                    admin = User(
-                        email='info@ptsa.co.za',
-                        password=generate_password_hash('info123'),
-                        role='admin',
-                        is_active=True
-                    )
-                    db.session.add(admin)
-                    db.session.commit()
-                    logger.info("✅ Basic admin user created")
+                success = comprehensive_seed()
+                if success:
+                    logger.info("✅ Comprehensive seeding completed successfully!")
+                else:
+                    logger.error("❌ Comprehensive seeding failed")
+                    return False
             else:
                 logger.info("ℹ️ Database already contains data, skipping seed")
             
@@ -61,8 +50,6 @@ def init_postgres_db():
             
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return False
 
 if __name__ == "__main__":

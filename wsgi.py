@@ -1,22 +1,21 @@
-#!/usr/bin/env python3
-"""
-WSGI entry point for PTSA Tracker application
-"""
 import os
-import sys
-from pathlib import Path
+from dotenv import load_dotenv
 
-# Add the project root directory to Python path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+# Load .env only when present (useful for local dev)
+if os.path.exists(".env"):
+    load_dotenv(".env")
 
-# Import the Flask application factory
 from app import create_app
 
-# Create the application instance
 app = create_app()
 
+# Health check endpoint for Cloud Run (fast, no DB work)
+@app.get("/healthz")
+def health():
+    return {"status": "ok"}, 200
+
+# Local dev entrypoint (Cloud Run uses gunicorn, not this block)
 if __name__ == "__main__":
-    # For local development
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
 
