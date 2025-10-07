@@ -11,7 +11,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:///app/instance/ptsa.db
+        value: sqlite:////app/instance/ptsa.db
       - key: PYTHONPATH
         value: /app
       # Email Configuration (matching your image)
@@ -32,5 +32,10 @@ services:
       # Upload settings
       - key: UPLOAD_FOLDER
         value: /app/uploads
+      # Additional Flask settings
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: WTF_CSRF_ENABLED
+        value: true
     healthCheckPath: /health
     autoDeploy: true
