@@ -18,6 +18,12 @@ ls -la /app/
 echo "🧪 Testing wsgi import..."
 python -c "import wsgi; print('✅ WSGI import successful')"
 
+# Ensure database directory exists with proper permissions
+echo "📁 Setting up database directory..."
+mkdir -p /app/instance
+chmod 755 /app/instance
+ls -la /app/instance/
+
 # Initialize database
 echo "📋 Initializing database..."
 python init_db.py

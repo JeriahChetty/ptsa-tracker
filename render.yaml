@@ -11,7 +11,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:////app/instance/ptsa.db
+        value: sqlite:///app/instance/ptsa.db
       - key: PYTHONPATH
         value: /app
       # Email Configuration (matching your image)

@@ -4,6 +4,7 @@ Simple database initialization script for Render deployment
 """
 import os
 import sys
+from pathlib import Path
 from app import create_app
 from app.extensions import db
 from app.models import User, Company, NotificationConfig
@@ -13,7 +14,14 @@ def init_database():
     """Initialize database with basic data"""
     print("🚀 Initializing database...")
     
-    app = create_app()
+    # Ensure instance directory exists
+    instance_dir = Path("/app/instance")
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    print(f"📁 Instance directory: {instance_dir} (exists: {instance_dir.exists()})")
+    
+    app = create_app('production')
+    print(f"🔧 Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+    
     with app.app_context():
         # Create all tables
         db.create_all()
