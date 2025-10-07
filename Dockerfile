@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Copy and make entrypoint script executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Create necessary directories and set permissions
 RUN mkdir -p /app/uploads /app/instance /app/logs && \
     chown -R appuser:appuser /app
@@ -34,6 +38,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 10000
 
-# Run database initialization and then start the app
-CMD python migrate_to_postgres.py && \
-    gunicorn --bind 0.0.0.0:10000 --workers 2 --timeout 120 app:app
+# Run our entrypoint script
+CMD ["/app/entrypoint.sh"]
