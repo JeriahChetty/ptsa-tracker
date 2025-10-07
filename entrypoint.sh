@@ -8,6 +8,8 @@ echo "🔍 Environment check:"
 echo "   PYTHONPATH: $PYTHONPATH"
 echo "   PORT: ${PORT:-10000}"
 echo "   Working directory: $(pwd)"
+echo "   Current user: $(whoami)"
+echo "   User ID: $(id)"
 echo "   Python version: $(python --version)"
 
 # List files to ensure everything is there
@@ -22,7 +24,10 @@ python -c "import wsgi; print('✅ WSGI import successful')"
 echo "📁 Setting up database directory..."
 mkdir -p /app/instance
 chmod 755 /app/instance
-ls -la /app/instance/
+echo "   Directory permissions:"
+ls -la /app/ | grep instance
+echo "   Directory contents:"
+ls -la /app/instance/ || echo "   (directory is empty)"
 
 # Initialize database
 echo "📋 Initializing database..."
