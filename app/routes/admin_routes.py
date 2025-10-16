@@ -1078,7 +1078,7 @@ def company_measures_wizard(company_id: int):
 
 
 # --- CRUD for Companies ---
-@admin_bp.route("/companies/<int:company_id>")
+@admin_bp.route("/companies/<int:company_id>", methods=["GET", "POST"])
 @login_required
 def company_profile(company_id):
     company = Company.query.get_or_404(company_id)
@@ -1091,6 +1091,7 @@ def company_profile(company_id):
         company.tech_resources = request.form.get("tech_resources", "").strip() or None
         company.human_resources = request.form.get("human_resources", "").strip() or None
         company.membership = request.form.get("membership", "").strip() or None
+        company.phone = request.form.get("phone", "").strip() or None
         
         db.session.commit()
         flash("Company profile updated successfully.", "success")
