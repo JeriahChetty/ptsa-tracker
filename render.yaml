@@ -5,6 +5,11 @@ services:
     dockerfilePath: ./Dockerfile.render
     plan: free
     region: singapore
+    # Persistent disk to prevent data loss on restart
+    disk:
+      name: ptsa-data
+      mountPath: /app/instance
+      sizeGB: 1
     envVars:
       - key: FLASK_ENV
         value: production
