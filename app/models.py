@@ -35,6 +35,11 @@ class User(UserMixin, TimestampMixin, db.Model):
         lazy="select",
     )
 
+    @property
+    def is_admin(self) -> bool:
+        """Check if user is an admin"""
+        return self.role == "admin"
+
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role})>"
 

@@ -88,6 +88,9 @@ def create_app(config_name="production"):
         # Health check blueprint is optional
         pass
     
+    # Setup session protection middleware
+    setup_session_protection(app)
+    
     return app
 
 

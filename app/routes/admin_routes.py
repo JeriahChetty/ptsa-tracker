@@ -1836,8 +1836,8 @@ def export_benchmarking_data():
     
     # Write header
     writer.writerow([
-        'Company', 'Year', 'Revenue', 'Employees', 'Industry',
-        'Created Date', 'Updated Date'
+        'Company', 'Year', 'Turnover', 'Employees', 'Tools Produced',
+        'On-Time Delivery', 'Export %', 'Created Date', 'Updated Date'
     ])
     
     # Write data
@@ -1845,9 +1845,11 @@ def export_benchmarking_data():
         writer.writerow([
             benchmark.company.name,
             benchmark.data_year,
-            benchmark.revenue or '',
+            benchmark.turnover or '',
             benchmark.employees or '',
-            benchmark.industry or '',
+            benchmark.tools_produced or '',
+            benchmark.on_time_delivery or '',
+            benchmark.export_percentage or '',
             benchmark.created_at.strftime('%Y-%m-%d %H:%M:%S') if benchmark.created_at else '',
             benchmark.updated_at.strftime('%Y-%m-%d %H:%M:%S') if benchmark.updated_at else ''
         ])
@@ -1895,7 +1897,7 @@ def admin_profile():
             
             # Verify current password
             from werkzeug.security import check_password_hash, generate_password_hash
-            if not check_password_hash(current_user.password_hash, current_password):
+            if not check_password_hash(current_user.password, current_password):
                 flash("Current password is incorrect.", "danger")
                 return redirect(url_for("admin.admin_profile", edit=1))
             
@@ -1908,7 +1910,7 @@ def admin_profile():
                 return redirect(url_for("admin.admin_profile", edit=1))
             
             # Update password
-            current_user.password_hash = generate_password_hash(new_password)
+            current_user.password = generate_password_hash(new_password)
             db.session.commit()
             flash("Password changed successfully.", "success")
             return redirect(url_for("admin.admin_profile"))
