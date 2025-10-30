@@ -138,37 +138,37 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Measure name</label>
-                    <input class="form-control" required placeholder="e.g., Implement 5S in Toolroom">
+                    <input name="measures[0][name]" class="form-control" required placeholder="e.g., Implement 5S in Toolroom">
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Target / Objective</label>
-                    <input class="form-control" placeholder="e.g., Reduce changeover by 20%">
+                    <input name="measures[0][target]" class="form-control" placeholder="e.g., Reduce changeover by 20%">
                 </div>
 
                 <div class="col-12">
                     <label class="form-label">Measure Detail</label>
-                    <textarea class="form-control" rows="2" placeholder="Short summary"></textarea>
+                    <textarea name="measures[0][measure_detail]" class="form-control" rows="2" placeholder="Short summary"></textarea>
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Departments</label>
-                    <input class="form-control" placeholder="e.g., Toolroom, QA">
+                    <input name="measures[0][departments]" class="form-control" placeholder="e.g., Toolroom, QA">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Responsible</label>
-                    <input class="form-control" placeholder="e.g., Maintenance Lead">
+                    <input name="measures[0][responsible]" class="form-control" placeholder="e.g., Maintenance Lead">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Participants</label>
-                    <input class="form-control" placeholder="Names or teams">
+                    <input name="measures[0][participants]" class="form-control" placeholder="Names or teams">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Priority/Urgency</label>
-                    <select class="form-select">
+                    <select name="measures[0][urgency]" class="form-select">
                         <option value="1">Low (1)</option>
                         <option value="2" selected>Normal (2)</option>
                         <option value="3">High (3)</option>
@@ -177,12 +177,12 @@
 
                 <div class="col-md-4">
                     <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control">
+                    <input name="measures[0][start_date]" type="date" class="form-control">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">End Date</label>
-                    <input type="date" class="form-control">
+                    <input name="measures[0][end_date]" type="date" class="form-control">
                 </div>
             </div>
 
@@ -199,14 +199,14 @@
                         <div class="col-md-12">
                             <label class="form-label">Steps</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input class="form-control" placeholder="e.g., Set in Order (Seiton)">
+                                <input name="measures[0][steps][0][title]" class="form-control" placeholder="e.g., Set in Order (Seiton)">
                                 <span class="badge bg-primary step-number" style="min-width: 60px; font-size: 0.875rem;">Step 1</span>
                             </div>
                         </div>
 
                         <div class="col-12">
                             <label class="form-label">Add Image (when applicable)</label>
-                            <input type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
+                            <input name="measures[0][steps][0][files][]" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
                         </div>
                         <div class="col-12 text-end">
                             <button type="button" class="btn btn-sm btn-outline-danger remove-step">Delete</button>
@@ -224,14 +224,14 @@
             <div class="col-md-12">
                 <label class="form-label">Steps</label>
                 <div class="d-flex align-items-center gap-2">
-                    <input class="form-control" placeholder="e.g., Shine (Seiso)">
+                    <input name="measures[0][steps][0][title]" class="form-control" placeholder="e.g., Shine (Seiso)">
                     <span class="badge bg-primary step-number" style="min-width: 60px; font-size: 0.875rem;">Step 1</span>
                 </div>
             </div>
 
             <div class="col-12">
                 <label class="form-label">Add Image (when applicable)</label>
-                <input type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
+                <input name="measures[0][steps][0][files][]" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
             </div>
             <div class="col-12 text-end">
                 <button type="button" class="btn btn-sm btn-outline-danger remove-step">Delete</button>
