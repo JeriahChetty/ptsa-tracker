@@ -5,8 +5,10 @@ from flask_login import current_user
 def setup_session_protection(app):
     @app.before_request
     def check_session_expiration():
-        # Skip for static files and auth endpoints
-        if request.path.startswith('/static') or request.path.startswith('/auth/'):
+        # Skip for static files, auth endpoints, and health checks
+        if (request.path.startswith('/static') or 
+            request.path.startswith('/auth/') or
+            request.path.startswith('/health')):
             return None
             
         # Check if user is logged in but session might be stale
@@ -14,10 +16,11 @@ def setup_session_protection(app):
             # Get last activity time
             last_activity_str = session.get('last_activity')
             
-            # If no activity recorded, set it now
+            # If no activity recorded, set it now and allow access
             if not last_activity_str:
                 session['last_activity'] = datetime.utcnow().isoformat()
                 session.permanent = True
+                app.logger.info(f"Session initialized for user: {current_user.email}")
                 return None
                 
             try:
@@ -25,12 +28,19 @@ def setup_session_protection(app):
                 last_activity = datetime.fromisoformat(last_activity_str)
                 
                 # Check if session is too old (optional, as we use permanent sessions)
-                max_idle = app.config.get('MAX_SESSION_IDLE_MINUTES', 60)  # Default 1 hour
-                if datetime.utcnow() - last_activity > timedelta(minutes=max_idle):
+                max_idle = app.config.get('MAX_SESSION_IDLE_MINUTES', 240)  # Default 4 hours
+                idle_duration = datetime.utcnow() - last_activity
+                
+                if idle_duration > timedelta(minutes=max_idle):
+                    app.logger.warning(f"Session expired for user: {current_user.email} after {idle_duration}")
+                    session.clear()
                     return redirect(url_for('auth.login', next=request.url))
                     
                 # Update the timestamp for active users
                 session['last_activity'] = datetime.utcnow().isoformat()
-            except:
-                # If timestamp is invalid, just update it
+                session.modified = True
+            except Exception as e:
+                # If timestamp is invalid, reset it and allow access
+                app.logger.warning(f"Session timestamp error: {e}, resetting for {current_user.email}")
                 session['last_activity'] = datetime.utcnow().isoformat()
+                session.permanent = True

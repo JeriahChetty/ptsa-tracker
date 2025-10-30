@@ -35,6 +35,10 @@ def login():
 
             if user and user.is_active and check_password_hash(user.password, password_input):
                 login_user(user, remember=True)
+                
+                # Initialize session for middleware
+                session['last_activity'] = datetime.utcnow().isoformat()
+                session.permanent = True
 
                 # Redirect based on role
                 next_page = request.args.get("next")

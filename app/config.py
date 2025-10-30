@@ -12,6 +12,11 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     
+    # Session configuration
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=4)
+    SESSION_REFRESH_EACH_REQUEST = True
+    MAX_SESSION_IDLE_MINUTES = 240  # 4 hours
+    
     # Flask-Login settings
     REMEMBER_COOKIE_DURATION = timedelta(days=7)
     REMEMBER_COOKIE_SECURE = True
