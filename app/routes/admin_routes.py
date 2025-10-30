@@ -333,6 +333,7 @@ def companies():
             for mid in measure_ids:
                 m = Measure.query.get(int(mid))
                 if not m:
+                    current_app.logger.warning(f"Skipping invalid measure ID: {mid} during company creation")
                     continue
 
                 # compute due_at from measure defaults (safe)
@@ -1210,12 +1211,14 @@ def save_measures():
             participants = measures_data.get(f'measures[{i}][participants]', [''])[0]
             
             if not name:
+                current_app.logger.warning(f"Skipping measure at index {i} - missing name")
                 continue  # Skip empty measures
                 
             # Create or update measure
             if measure_id:
                 measure = Measure.query.get(measure_id)
                 if not measure:
+                    current_app.logger.warning(f"Skipping measure at index {i} - ID {measure_id} not found")
                     continue
             else:
                 measure = Measure()
@@ -1245,6 +1248,7 @@ def save_measures():
                 step_number = int(step_numbers[j]) if j < len(step_numbers) and step_numbers[j].isdigit() else j
                 
                 if not step_title:
+                    current_app.logger.warning(f"Skipping empty step at index {j} for measure {i}")
                     continue  # Skip empty steps
                     
                 # Create or update step

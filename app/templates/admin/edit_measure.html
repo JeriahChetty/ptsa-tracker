@@ -266,19 +266,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add new step
   document.getElementById('addStepBtn').addEventListener('click', function() {
     stepCounter++;
+    const stepIndex = stepCounter - 1;
     const stepHtml = `
-      <div class="step-item" data-step-number="${stepCounter}">
+      <div class="step-item" data-step-number="${stepCounter}" data-step-index="${stepIndex}">
         <div class="d-flex align-items-start">
           <div class="step-number">${stepCounter}</div>
           <div class="step-content">
-            <input type="hidden" name="step_ids[]" value="">
+            <input type="hidden" name="step_ids[${stepIndex}]" value="">
             <div class="mb-2">
               <label class="form-label small">Step Title</label>
-              <input type="text" class="form-control" name="step_titles[]" placeholder="Step title...">
+              <input type="text" class="form-control" name="step_titles[${stepIndex}]" placeholder="Step title...">
             </div>
             <div class="mb-2">
               <label class="form-label small">Step Description</label>
-              <textarea class="form-control" name="step_descriptions[]" rows="2" placeholder="Detailed description of this step..."></textarea>
+              <textarea class="form-control" name="step_descriptions[${stepIndex}]" rows="2" placeholder="Detailed description of this step..."></textarea>
             </div>
           </div>
           <button type="button" class="btn btn-sm btn-outline-danger remove-step ms-2" title="Remove Step">
@@ -300,7 +301,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Update step numbers
+  /**
+   * Updates step numbers visually and maintains proper step counter
+   * Called after adding or removing steps to keep numbering sequential
+   */
   function updateStepNumbers() {
     const steps = document.querySelectorAll('.step-item');
     steps.forEach((step, index) => {

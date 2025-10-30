@@ -247,6 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const tplMeasure = document.getElementById('tpl-measure');
     const tplStep = document.getElementById('tpl-step');
 
+    /**
+     * Reindexes all measure blocks and their steps to ensure proper form field naming
+     * Updates measure titles, field names, IDs, and step numbers
+     * This is crucial for proper form data submission
+     */
     function reindex() {
         container.querySelectorAll('.measure-block').forEach((block, mIdx) => {
             block.querySelector('.measure-title').textContent = `Measure ${mIdx + 1}`;
