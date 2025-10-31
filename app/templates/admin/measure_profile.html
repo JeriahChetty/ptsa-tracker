@@ -115,7 +115,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for step in measure.steps|default([])|sort(attribute='order_index') %}
+            {% for step in measure.steps|default([])|sort(attribute='step') %}
               <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ step.title }}</td>

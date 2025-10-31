@@ -909,22 +909,36 @@ def company_measures_wizard(company_id: int):
         return render_template("admin/company_measures_wizard.html", company=company)
 
     try:
-        # Extract measures from form data - handles nested structure
+        # Extract measures from form data - handles nested structure including steps
         measures_data = {}
         for key, value in request.form.items():
-            # Parse nested field names like measures[0][name]
+            # Parse nested field names like measures[0][name] and measures[0][steps][0][title]
             if key.startswith('measures[') and ']' in key:
                 parts = key.split('[')
                 if len(parts) >= 3:
                     index = parts[1].rstrip(']')
-                    field = parts[2].rstrip(']')
                     
                     # Initialize dict for this measure if needed
                     if index not in measures_data:
                         measures_data[index] = {}
                     
-                    # Store the field value
-                    measures_data[index][field] = value
+                    # Check if this is a step field (measures[0][steps][0][title])
+                    if len(parts) >= 5 and parts[2].rstrip(']') == 'steps':
+                        step_index = parts[3].rstrip(']')
+                        step_field = parts[4].rstrip(']')
+                        
+                        # Initialize steps dict if needed
+                        if 'steps' not in measures_data[index]:
+                            measures_data[index]['steps'] = {}
+                        if step_index not in measures_data[index]['steps']:
+                            measures_data[index]['steps'][step_index] = {}
+                        
+                        # Store the step field value
+                        measures_data[index]['steps'][step_index][step_field] = value
+                    else:
+                        # Regular field (not a step)
+                        field = parts[2].rstrip(']')
+                        measures_data[index][field] = value
 
         # Log received data for debugging
         current_app.logger.info(f"Received measures wizard data - count: {len(measures_data)}")
@@ -1140,17 +1154,77 @@ def measure_profile(measure_id):
 def edit_measure(measure_id):
     measure = Measure.query.get_or_404(measure_id)
     if request.method == "POST":
-        measure.name = request.form.get("name", measure.name)
-        measure.measure_detail = request.form.get("measure_detail", measure.measure_detail)
-        measure.target = request.form.get("target", measure.target)
-        measure.departments = request.form.get("departments", measure.departments)
-        measure.responsible = request.form.get("responsible", measure.responsible)
-        measure.participants = request.form.get("participants", measure.participants)
-        measure.start_date = request.form.get("start_date", measure.start_date)
-        measure.end_date = request.form.get("end_date", measure.end_date)
-        db.session.commit()
-        flash("Measure updated.", "success")
-        return redirect(url_for("admin.measure_profile", measure_id=measure.id))
+        try:
+            # Update basic measure fields
+            measure.name = request.form.get("name", "").strip() or measure.name
+            measure.measure_detail = request.form.get("measure_detail", "").strip() or None
+            measure.target = request.form.get("target", "").strip() or None
+            measure.departments = request.form.get("departments", "").strip() or None
+            measure.responsible = request.form.get("responsible", "").strip() or None
+            measure.participants = request.form.get("participants", "").strip() or None
+            
+            # Update date fields
+            start_date_str = request.form.get("start_date", "").strip()
+            if start_date_str:
+                measure.start_date = datetime.fromisoformat(start_date_str).date()
+            
+            end_date_str = request.form.get("end_date", "").strip()
+            if end_date_str:
+                measure.end_date = datetime.fromisoformat(end_date_str).date()
+            
+            # Update numeric fields if they exist in the model
+            if hasattr(measure, 'default_duration_days'):
+                duration_str = request.form.get("default_duration_days", "").strip()
+                measure.default_duration_days = int(duration_str) if duration_str else None
+            
+            if hasattr(measure, 'default_urgency'):
+                urgency_str = request.form.get("default_urgency", "").strip()
+                measure.default_urgency = int(urgency_str) if urgency_str else None
+            
+            # Handle steps: get arrays from form
+            step_ids = request.form.getlist("step_ids[]")
+            step_titles = request.form.getlist("step_titles[]")
+            
+            # Track which step IDs are in the form (to delete removed ones)
+            submitted_step_ids = set()
+            
+            # Process each step from the form
+            for idx, (step_id, title) in enumerate(zip(step_ids, step_titles)):
+                title = title.strip()
+                if not title:
+                    continue  # Skip empty steps
+                
+                if step_id and step_id.strip():
+                    # Update existing step
+                    step = MeasureStep.query.get(int(step_id))
+                    if step and step.measure_id == measure.id:
+                        step.title = title
+                        step.step = idx
+                        submitted_step_ids.add(step.id)
+                else:
+                    # Create new step
+                    new_step = MeasureStep(
+                        measure_id=measure.id,
+                        title=title,
+                        step=idx
+                    )
+                    db.session.add(new_step)
+                    db.session.flush()
+                    submitted_step_ids.add(new_step.id)
+            
+            # Delete steps that were removed from the form
+            for step in measure.steps:
+                if step.id not in submitted_step_ids:
+                    db.session.delete(step)
+            
+            db.session.commit()
+            flash("Measure and steps updated successfully.", "success")
+            return redirect(url_for("admin.measure_profile", measure_id=measure.id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating measure: {str(e)}")
+            flash(f"An error occurred: {str(e)}", "danger")
+            return render_template("admin/edit_measure.html", measure=measure)
     return render_template("admin/edit_measure.html", measure=measure)
 
 @admin_bp.route("/measures/<int:measure_id>/delete", methods=["POST"])
@@ -1586,14 +1660,14 @@ def add_step(measure_id):
             
         # Use the provided order or append to the end
         if order_index is None:
-            # Get the max order_index and add 1
-            max_order = db.session.query(db.func.max(MeasureStep.order_index)).filter_by(measure_id=measure_id).scalar()
+            # Get the max step number and add 1
+            max_order = db.session.query(db.func.max(MeasureStep.step)).filter_by(measure_id=measure_id).scalar()
             order_index = (max_order or -1) + 1
             
         step = MeasureStep(
             measure_id=measure_id,
             title=title,
-            order_index=order_index
+            step=order_index
         )
         db.session.add(step)
         db.session.commit()

@@ -514,6 +514,45 @@ document.addEventListener('DOMContentLoaded', function() {
   let isReorderMode = false;
   let measureSortable = null;
   let stepSortables = [];
+  
+  // Auto-refresh measures every 30 seconds to detect changes from other users
+  let autoRefreshInterval = null;
+  function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(function() {
+      // Only refresh if not in reorder mode
+      if (!isReorderMode) {
+        fetch(window.location.href, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          // Parse the new HTML and extract measures container
+          const parser = new DOMParser();
+          const newDoc = parser.parseFromString(html, 'text/html');
+          const newContainer = newDoc.getElementById('measuresContainer');
+          const oldContainer = document.getElementById('measuresContainer');
+          
+          // Compare the HTML - if different, reload the page
+          if (newContainer && oldContainer && newContainer.innerHTML !== oldContainer.innerHTML) {
+            // Measures have changed, reload the page
+            location.reload();
+          }
+        })
+        .catch(error => console.debug('Auto-refresh check failed:', error));
+      }
+    }, 30000); // Check every 30 seconds
+  }
+  
+  // Stop auto-refresh when entering reorder mode
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
+  }
 
   // DOM elements
   const toggleReorderBtn = document.getElementById('toggleReorderMode');
@@ -733,6 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (isReorderMode) {
       // Enter reorder mode
+      stopAutoRefresh(); // Stop auto-refresh while reordering
       document.body.classList.add('reorder-mode');
       orderControls.style.display = 'block';
       toggleReorderBtn.style.display = 'none';
@@ -775,6 +815,9 @@ document.addEventListener('DOMContentLoaded', function() {
         handle.classList.remove('show');
         handle.classList.add('step-drag-handle-hidden');
       });
+      
+      // Resume auto-refresh when exiting reorder mode
+      startAutoRefresh();
     }
 
     // Update sortables
@@ -793,6 +836,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize sortables
   initializeMeasureSortable();
   initializeStepSortables();
+  
+  // Start auto-refresh to detect changes from other users
+  startAutoRefresh();
 });
 </script>
 {% endblock %}

@@ -91,6 +91,17 @@ def create_app(config_name="production"):
     # Setup session protection middleware
     setup_session_protection(app)
     
+    # Add cache control headers to prevent stale data
+    @app.after_request
+    def add_cache_control_headers(response):
+        """Add cache control headers to prevent browser caching of dynamic content"""
+        # Don't cache HTML pages (especially admin pages)
+        if response.content_type and 'text/html' in response.content_type:
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+    
     return app
 
 
