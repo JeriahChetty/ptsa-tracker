@@ -287,6 +287,7 @@ def companies():
             phone = request.form.get("phone", "").strip()
             login_email = (request.form.get("login_email") or "").strip().lower()
             login_password = (request.form.get("login_password") or "").strip()
+            login_password_confirm = (request.form.get("login_password_confirm") or "").strip()
 
             measure_ids = request.form.getlist("assign_measure_ids")  # optional multi-select
 
@@ -295,7 +296,10 @@ def companies():
                 flash("Company name is required.", "warning")
                 return redirect(url_for("admin.companies"))
             if not login_email or not login_password:
-                flash("Login email and temporary password are required.", "warning")
+                flash("Login email and password are required.", "warning")
+                return redirect(url_for("admin.companies"))
+            if login_password != login_password_confirm:
+                flash("Passwords do not match.", "warning")
                 return redirect(url_for("admin.companies"))
 
             # duplicates

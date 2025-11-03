@@ -1,6 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Login · PTSA Tracker{% endblock %}
 
+{% block head %}
+{{ super() }}
+<style>
+  .password-input-group {
+    position: relative;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 18px;
+    z-index: 10;
+  }
+  
+  .password-toggle:hover {
+    color: #495057;
+  }
+  
+  .form-control.with-toggle {
+    padding-right: 40px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6 col-lg-5 col-xl-4">
@@ -16,7 +47,12 @@
           
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
+            <div class="password-input-group">
+              <input type="password" class="form-control with-toggle" id="password" name="password" required>
+              <button type="button" class="password-toggle" id="passwordToggle" title="Show/hide password">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
           </div>
           
           <div class="mb-3 form-check">
@@ -32,4 +68,25 @@
     </div>
   </div>
 </div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const passwordInput = document.getElementById('password');
+  const passwordToggle = document.getElementById('passwordToggle');
+  const toggleIcon = passwordToggle.querySelector('i');
+  
+  passwordToggle.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+      passwordInput.type = 'password';
+      toggleIcon.className = 'fas fa-eye';
+    }
+  });
+});
+</script>
 {% endblock %}

@@ -46,6 +46,32 @@
   .mh-220 {
     max-height: 220px;
   }
+  
+  .password-input-group {
+    position: relative;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 16px;
+    z-index: 10;
+  }
+  
+  .password-toggle:hover {
+    color: #495057;
+  }
+  
+  .form-control.with-toggle {
+    padding-right: 40px;
+  }
 </style>
 {% endblock %}
 
@@ -105,9 +131,24 @@
            placeholder="e.g., contact@acme.co.za">
   </div>
   <div class="mb-3">
-    <label for="login_password" class="form-label">Temporary password</label>
-    <input id="login_password" type="password" name="login_password" class="form-control" required
-           placeholder="Set a temporary password">
+    <label for="login_password" class="form-label">Enter password</label>
+    <div class="password-input-group">
+      <input id="login_password" type="password" name="login_password" class="form-control with-toggle" required
+             placeholder="Enter password">
+      <button type="button" class="password-toggle toggle-password" data-target="login_password" title="Show/hide password">
+        <i class="fas fa-eye"></i>
+      </button>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label for="login_password_confirm" class="form-label">Confirm password</label>
+    <div class="password-input-group">
+      <input id="login_password_confirm" type="password" name="login_password_confirm" class="form-control with-toggle" required
+             placeholder="Confirm password">
+      <button type="button" class="password-toggle toggle-password" data-target="login_password_confirm" title="Show/hide password">
+        <i class="fas fa-eye"></i>
+      </button>
+    </div>
   </div>
 
   <fieldset class="mb-3">
@@ -247,6 +288,39 @@ document.addEventListener('DOMContentLoaded', function() {
       localStorage.setItem('companiesSidebarCollapsed', 'true');
     }
   });
+  
+  // Password toggle functionality
+  document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      const icon = this.querySelector('i');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+      }
+    });
+  });
+  
+  // Form submission validation for password confirmation
+  const form = sidebarForm.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const password = document.getElementById('login_password').value;
+      const confirmPassword = document.getElementById('login_password_confirm').value;
+      
+      if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match. Please try again.');
+        return false;
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
