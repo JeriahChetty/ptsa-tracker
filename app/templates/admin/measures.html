@@ -365,69 +365,111 @@
 
 <!-- New Measure Modal -->
 <div class="modal fade" id="newMeasureModal" tabindex="-1" aria-labelledby="newMeasureModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
-      <form method="POST" action="{{ url_for('admin.create_measure') }}">
+      <form method="POST" action="{{ url_for('admin.create_measure') }}" id="newMeasureForm">
         <div class="modal-header">
-          <h5 class="modal-title" id="newMeasureModalLabel">New Measure</h5>
+          <h5 class="modal-title" id="newMeasureModalLabel">Create New Measure</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="name" class="form-label">Measure Name</label>
-            <input type="text" class="form-control" id="name" name="name" required>
-          </div>
-          <div class="mb-3">
-            <label for="measure_detail" class="form-label">Description</label>
-            <textarea class="form-control" id="measure_detail" name="measure_detail" rows="3"></textarea>
-          </div>
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <label for="target" class="form-label">Target</label>
-              <input type="text" class="form-control" id="target" name="target" placeholder="e.g., Reduce time by 20%">
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <!-- Basic Info Section -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
             </div>
-            <div class="col-md-6">
-              <label for="departments" class="form-label">Departments</label>
-              <input type="text" class="form-control" id="departments" name="departments" placeholder="e.g., Production, QA">
-            </div>
-            <div class="col-md-6">
-              <label for="responsible" class="form-label">Responsible</label>
-              <input type="text" class="form-control" id="responsible" name="responsible" placeholder="e.g., Department Manager">
-            </div>
-            <div class="col-md-6">
-              <label for="participants" class="form-label">Participants</label>
-              <input type="text" class="form-control" id="participants" name="participants" placeholder="e.g., Team members">
-            </div>
-            <div class="col-md-6">
-              <label for="start_date" class="form-label">Start Date</label>
-              <input type="date" class="form-control" id="start_date" name="start_date">
-            </div>
-            <div class="col-md-6">
-              <label for="end_date" class="form-label">End Date</label>
-              <input type="date" class="form-control" id="end_date" name="end_date">
-            </div>
-            <div class="col-md-6">
-              <label for="default_duration_days" class="form-label">Default Duration (days)</label>
-              <input type="number" class="form-control" id="default_duration_days" name="default_duration_days" min="1">
-            </div>
-            <div class="col-md-6">
-              <label for="default_urgency" class="form-label">Default Urgency</label>
-              <select class="form-select" id="default_urgency" name="default_urgency">
-                <option value="1">Low (1)</option>
-                <option value="2" selected>Normal (2)</option>
-                <option value="3">High (3)</option>
-              </select>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="modal_name" class="form-label">Measure Name *</label>
+                  <input type="text" class="form-control" id="modal_name" name="name" required placeholder="e.g., Implement 5S in Toolroom">
+                </div>
+                <div class="col-md-6">
+                  <label for="modal_target" class="form-label">Target / Objective</label>
+                  <input type="text" class="form-control" id="modal_target" name="target" placeholder="e.g., Reduce changeover by 20%">
+                </div>
+                <div class="col-12">
+                  <label for="modal_measure_detail" class="form-label">Measure Detail</label>
+                  <textarea class="form-control" id="modal_measure_detail" name="measure_detail" rows="2" placeholder="Short summary"></textarea>
+                </div>
+                <div class="col-md-4">
+                  <label for="modal_departments" class="form-label">Departments</label>
+                  <input type="text" class="form-control" id="modal_departments" name="departments" placeholder="e.g., Toolroom, QA">
+                </div>
+                <div class="col-md-4">
+                  <label for="modal_responsible" class="form-label">Responsible</label>
+                  <input type="text" class="form-control" id="modal_responsible" name="responsible" placeholder="e.g., Maintenance Lead">
+                </div>
+                <div class="col-md-4">
+                  <label for="modal_participants" class="form-label">Participants</label>
+                  <input type="text" class="form-control" id="modal_participants" name="participants" placeholder="Names or teams">
+                </div>
+              </div>
             </div>
           </div>
-          <div class="mb-3">
-            <label for="default_steps" class="form-label">Default Steps (one per line)</label>
-            <textarea class="form-control" id="default_steps" name="default_steps" rows="5" 
-                      placeholder="Step 1: Plan&#10;Step 2: Execute&#10;Step 3: Verify&#10;Step 4: Act"></textarea>
+
+          <!-- Timeline & Priority Section -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Timeline & Priority</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label for="modal_start_date" class="form-label">Start Date</label>
+                  <input type="date" class="form-control" id="modal_start_date" name="start_date">
+                </div>
+                <div class="col-md-4">
+                  <label for="modal_end_date" class="form-label">End Date</label>
+                  <input type="date" class="form-control" id="modal_end_date" name="end_date">
+                </div>
+                <div class="col-md-4">
+                  <label for="modal_default_urgency" class="form-label">Priority/Urgency</label>
+                  <select class="form-select" id="modal_default_urgency" name="default_urgency">
+                    <option value="1">Low (1)</option>
+                    <option value="2" selected>Normal (2)</option>
+                    <option value="3">High (3)</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="modal_default_duration_days" class="form-label">Default Duration (days)</label>
+                  <input type="number" class="form-control" id="modal_default_duration_days" name="default_duration_days" min="1">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Steps Section -->
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0"><i class="fas fa-list-ol me-2"></i>Procedure Steps</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="addModalStepBtn">
+                <i class="fas fa-plus me-1"></i>Add Step
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="modalStepsContainer" class="d-grid gap-2">
+                <!-- Initial step -->
+                <div class="modal-step-item border rounded p-3">
+                  <div class="d-flex align-items-start">
+                    <span class="badge bg-primary me-2" style="min-width: 60px;">Step 1</span>
+                    <div class="flex-grow-1">
+                      <input type="text" class="form-control form-control-sm" name="step_titles[]" placeholder="Step title..." required>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-modal-step">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Create Measure</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Create Measure
+          </button>
         </div>
       </form>
     </div>
@@ -839,6 +881,85 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Start auto-refresh to detect changes from other users
   startAutoRefresh();
+  
+  // ===== NEW MEASURE MODAL - STEP MANAGEMENT =====
+  const modalStepsContainer = document.getElementById('modalStepsContainer');
+  const addModalStepBtn = document.getElementById('addModalStepBtn');
+  const newMeasureForm = document.getElementById('newMeasureForm');
+  
+  // Add new step in modal
+  if (addModalStepBtn) {
+    addModalStepBtn.addEventListener('click', function() {
+      const stepCount = modalStepsContainer.querySelectorAll('.modal-step-item').length;
+      const newStepHtml = `
+        <div class="modal-step-item border rounded p-3">
+          <div class="d-flex align-items-start">
+            <span class="badge bg-primary me-2" style="min-width: 60px;">Step ${stepCount + 1}</span>
+            <div class="flex-grow-1">
+              <input type="text" class="form-control form-control-sm" name="step_titles[]" placeholder="Step title..." required>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-modal-step">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      modalStepsContainer.insertAdjacentHTML('beforeend', newStepHtml);
+      updateModalStepNumbers();
+    });
+  }
+  
+  // Remove step in modal
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-modal-step')) {
+      const stepItem = e.target.closest('.modal-step-item');
+      const totalSteps = modalStepsContainer.querySelectorAll('.modal-step-item').length;
+      
+      if (totalSteps <= 1) {
+        alert('At least one step is required.');
+        return;
+      }
+      
+      stepItem.remove();
+      updateModalStepNumbers();
+    }
+  });
+  
+  // Update step numbers in modal
+  function updateModalStepNumbers() {
+    const steps = modalStepsContainer.querySelectorAll('.modal-step-item');
+    steps.forEach((step, index) => {
+      const badge = step.querySelector('.badge');
+      if (badge) {
+        badge.textContent = `Step ${index + 1}`;
+      }
+    });
+  }
+  
+  // Reset form when modal is closed
+  const newMeasureModal = document.getElementById('newMeasureModal');
+  if (newMeasureModal) {
+    newMeasureModal.addEventListener('hidden.bs.modal', function() {
+      // Reset the form
+      newMeasureForm.reset();
+      
+      // Remove all steps except the first one
+      const steps = modalStepsContainer.querySelectorAll('.modal-step-item');
+      steps.forEach((step, index) => {
+        if (index > 0) {
+          step.remove();
+        }
+      });
+      
+      // Clear the first step input
+      const firstStepInput = modalStepsContainer.querySelector('input[name="step_titles[]"]');
+      if (firstStepInput) {
+        firstStepInput.value = '';
+      }
+      
+      updateModalStepNumbers();
+    });
+  }
 });
 </script>
 {% endblock %}

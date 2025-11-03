@@ -1,21 +1,58 @@
 {% extends "base.html" %}
 {% block title %}Companies · PTSA Tracker{% endblock %}
 
-{% block content %}
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <h2 class="mb-0">Companies</h2>
-  <div class="d-flex gap-2">
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.measures') }}">Go to Measures</a>
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.measure_history') }}">Measures History</a>
-  </div>
-</div>
+{% block head %}
+{{ super() }}
+<style>
+  .sidebar-form {
+    position: fixed;
+    left: 0;
+    top: 56px; /* Below navbar */
+    height: calc(100vh - 56px);
+    width: 420px;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+    overflow-y: auto;
+  }
+  
+  .sidebar-form.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar-toggle {
+    position: fixed;
+    left: 420px;
+    top: 70px;
+    z-index: 1001;
+    transition: left 0.3s ease-in-out;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+  }
+  
+  .sidebar-toggle.collapsed {
+    left: 0;
+  }
+  
+  .main-content {
+    margin-left: 440px;
+    transition: margin-left 0.3s ease-in-out;
+  }
+  
+  .main-content.expanded {
+    margin-left: 20px;
+  }
+  
+  .mh-220 {
+    max-height: 220px;
+  }
+</style>
+{% endblock %}
 
-<div class="row g-4">
-  <!-- Create company -->
-  <div class="col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h5 class="card-title mb-3">Add Company</h5>
+{% block content %}
+<!-- Sidebar Form -->
+<div class="sidebar-form p-4" id="sidebarForm">
+  <h5 class="mb-3"><i class="fas fa-building me-2"></i>Add Company</h5>
 
         <form method="POST" action="{{ url_for('admin.companies') }}">
   <div class="mb-3">
@@ -89,17 +126,31 @@
     </div>
   </fieldset>
 
-  <button type="submit" class="btn btn-primary">Create company & login</button>
+  <button type="submit" class="btn btn-primary w-100">
+    <i class="fas fa-plus me-2"></i>Create company & login
+  </button>
 </form>
-     </div>
+</div>
+
+<!-- Toggle Button -->
+<button class="btn btn-primary sidebar-toggle" id="sidebarToggle" title="Toggle form">
+  <i class="fas fa-chevron-left"></i>
+</button>
+
+<!-- Main Content -->
+<div class="main-content" id="mainContent">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h2 class="mb-0">Companies</h2>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ url_for('admin.measures') }}">Go to Measures</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('admin.measure_history') }}">Measures History</a>
     </div>
   </div>
 
   <!-- Companies table -->
-  <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title mb-3">All Companies</h5>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title mb-3">All Companies</h5>
 
         <div class="table-responsive">
           <table class="table table-sm align-middle">
@@ -154,11 +205,50 @@
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebarForm = document.getElementById('sidebarForm');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const mainContent = document.getElementById('mainContent');
+  const toggleIcon = sidebarToggle.querySelector('i');
+  
+  // Load saved state from localStorage
+  const isCollapsed = localStorage.getItem('companiesSidebarCollapsed') === 'true';
+  if (isCollapsed) {
+    sidebarForm.classList.add('collapsed');
+    sidebarToggle.classList.add('collapsed');
+    mainContent.classList.add('expanded');
+    toggleIcon.className = 'fas fa-chevron-right';
+  }
+  
+  sidebarToggle.addEventListener('click', function() {
+    const isCurrentlyCollapsed = sidebarForm.classList.contains('collapsed');
+    
+    if (isCurrentlyCollapsed) {
+      // Expand sidebar
+      sidebarForm.classList.remove('collapsed');
+      sidebarToggle.classList.remove('collapsed');
+      mainContent.classList.remove('expanded');
+      toggleIcon.className = 'fas fa-chevron-left';
+      localStorage.setItem('companiesSidebarCollapsed', 'false');
+    } else {
+      // Collapse sidebar
+      sidebarForm.classList.add('collapsed');
+      sidebarToggle.classList.add('collapsed');
+      mainContent.classList.add('expanded');
+      toggleIcon.className = 'fas fa-chevron-right';
+      localStorage.setItem('companiesSidebarCollapsed', 'true');
+    }
+  });
+});
+</script>
 {% endblock %}
 
 

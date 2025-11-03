@@ -439,10 +439,20 @@ def create_measure():
         db.session.add(m)
         db.session.flush()
 
-        steps_text = request.form.get("default_steps", "").strip()
-        if steps_text:
-            for idx, line in enumerate([s.strip() for s in steps_text.splitlines() if s.strip()]):
-                db.session.add(MeasureStep(measure_id=m.id, title=line, order_index=idx))
+        # Handle steps from new modal format (step_titles[]) or old format (default_steps)
+        step_titles = request.form.getlist("step_titles[]")
+        if step_titles:
+            # New format: individual step fields
+            for idx, title in enumerate(step_titles):
+                title = title.strip()
+                if title:
+                    db.session.add(MeasureStep(measure_id=m.id, title=title, step=idx))
+        else:
+            # Old format: textarea with one step per line (backwards compatibility)
+            steps_text = request.form.get("default_steps", "").strip()
+            if steps_text:
+                for idx, line in enumerate([s.strip() for s in steps_text.splitlines() if s.strip()]):
+                    db.session.add(MeasureStep(measure_id=m.id, title=line, step=idx))
 
         db.session.commit()
         flash(f"Measure '{m.name}' created.", "success")
