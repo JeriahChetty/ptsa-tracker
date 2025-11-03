@@ -35,9 +35,11 @@ class Config:
     if os.environ.get('DATABASE_URL'):
         # Production database (PostgreSQL on Render)
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+        print(f"🔗 Using PostgreSQL database: {SQLALCHEMY_DATABASE_URI}")
     else:
         # Development database (SQLite)
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(basedir, 'instance', 'ptsa.db')}"
+        print(f"📁 Using SQLite database: {SQLALCHEMY_DATABASE_URI}")
     
     # Ensure PostgreSQL connection is properly configured
     if SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
@@ -52,6 +54,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     # Use SQLite database in instance folder
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{basedir}/instance/ptsa_dev.db'
+    print(f"📁 Development config using: {SQLALCHEMY_DATABASE_URI}")
     REMEMBER_COOKIE_SECURE = False
 
 class TestingConfig(Config):
@@ -66,6 +69,7 @@ class ProductionConfig(Config):
     DEBUG = False
     # Use SQLite database in instance folder for production
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{basedir}/instance/ptsa.db'
+    print(f"🏭 Production config using: {SQLALCHEMY_DATABASE_URI}")
     
     # Production security settings
     REMEMBER_COOKIE_SECURE = False  # Set to False for HTTP in container
