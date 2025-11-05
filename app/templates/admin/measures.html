@@ -417,11 +417,12 @@
               <div class="row g-3">
                 <div class="col-md-4">
                   <label for="modal_start_date" class="form-label">Start Date</label>
-                  <input type="date" class="form-control" id="modal_start_date" name="start_date">
+                  <input type="date" class="form-control modal-date-input" id="modal_start_date" name="start_date">
                 </div>
                 <div class="col-md-4">
                   <label for="modal_end_date" class="form-label">End Date</label>
-                  <input type="date" class="form-control" id="modal_end_date" name="end_date">
+                  <input type="date" class="form-control modal-date-input" id="modal_end_date" name="end_date">
+                  <div id="modal_duration_display" class="mt-1 text-muted small"></div>
                 </div>
                 <div class="col-md-4">
                   <label for="modal_default_urgency" class="form-label">Priority/Urgency</label>
@@ -430,10 +431,6 @@
                     <option value="2" selected>Normal (2)</option>
                     <option value="3">High (3)</option>
                   </select>
-                </div>
-                <div class="col-md-6">
-                  <label for="modal_default_duration_days" class="form-label">Default Duration (days)</label>
-                  <input type="number" class="form-control" id="modal_default_duration_days" name="default_duration_days" min="1">
                 </div>
               </div>
             </div>
@@ -957,8 +954,45 @@ document.addEventListener('DOMContentLoaded', function() {
         firstStepInput.value = '';
       }
       
+      // Clear duration display
+      const durationDisplay = document.getElementById('modal_duration_display');
+      if (durationDisplay) {
+        durationDisplay.textContent = '';
+      }
+      
       updateModalStepNumbers();
     });
+  }
+  
+  // ===== DURATION CALCULATION FOR MODAL =====
+  const modalStartDate = document.getElementById('modal_start_date');
+  const modalEndDate = document.getElementById('modal_end_date');
+  const modalDurationDisplay = document.getElementById('modal_duration_display');
+  
+  function updateModalDuration() {
+    if (modalStartDate.value && modalEndDate.value) {
+      const start = new Date(modalStartDate.value);
+      const end = new Date(modalEndDate.value);
+      const diffTime = end - start;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays >= 0) {
+        modalDurationDisplay.textContent = `Duration: ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+        modalDurationDisplay.classList.remove('text-danger');
+        modalDurationDisplay.classList.add('text-muted');
+      } else {
+        modalDurationDisplay.textContent = 'End date must be after start date';
+        modalDurationDisplay.classList.remove('text-muted');
+        modalDurationDisplay.classList.add('text-danger');
+      }
+    } else {
+      modalDurationDisplay.textContent = '';
+    }
+  }
+  
+  if (modalStartDate && modalEndDate) {
+    modalStartDate.addEventListener('change', updateModalDuration);
+    modalEndDate.addEventListener('change', updateModalDuration);
   }
 });
 </script>
