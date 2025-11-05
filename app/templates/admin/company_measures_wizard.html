@@ -77,12 +77,13 @@
 
                     <div class="col-md-4">
                         <label for="m-0-start-date" class="form-label">Start Date</label>
-                        <input id="m-0-start-date" name="measures[0][start_date]" type="date" class="form-control">
+                        <input id="m-0-start-date" name="measures[0][start_date]" type="date" class="form-control date-input">
                     </div>
 
                     <div class="col-md-4">
                         <label for="m-0-end-date" class="form-label">End Date</label>
-                        <input id="m-0-end-date" name="measures[0][end_date]" type="date" class="form-control">
+                        <input id="m-0-end-date" name="measures[0][end_date]" type="date" class="form-control date-input">
+                        <div class="days-display mt-1 text-muted small"></div>
                     </div>
                 </div>
 
@@ -177,12 +178,13 @@
 
                 <div class="col-md-4">
                     <label class="form-label">Start Date</label>
-                    <input name="measures[0][start_date]" type="date" class="form-control">
+                    <input name="measures[0][start_date]" type="date" class="form-control date-input">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">End Date</label>
-                    <input name="measures[0][end_date]" type="date" class="form-control">
+                    <input name="measures[0][end_date]" type="date" class="form-control date-input">
+                    <div class="days-display mt-1 text-muted small"></div>
                 </div>
             </div>
 
@@ -246,6 +248,140 @@ document.addEventListener('DOMContentLoaded', function() {
     const addMeasureBtn = document.getElementById('add-measure');
     const tplMeasure = document.getElementById('tpl-measure');
     const tplStep = document.getElementById('tpl-step');
+    const form = document.getElementById('wizard-form');
+    const storageKey = 'ptsa_measures_form_{{ company.id }}';
+
+    /**
+     * Calculate and display days between start and end dates
+     */
+    function updateDaysDisplay(measureBlock) {
+        const startInput = measureBlock.querySelector('input[name$="[start_date]"]');
+        const endInput = measureBlock.querySelector('input[name$="[end_date]"]');
+        const daysDisplay = measureBlock.querySelector('.days-display');
+        
+        if (startInput && endInput && daysDisplay && startInput.value && endInput.value) {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            const diffTime = end - start;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 0) {
+                daysDisplay.textContent = `Duration: ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+                daysDisplay.classList.remove('text-danger');
+                daysDisplay.classList.add('text-muted');
+            } else {
+                daysDisplay.textContent = 'End date must be after start date';
+                daysDisplay.classList.remove('text-muted');
+                daysDisplay.classList.add('text-danger');
+            }
+        } else if (daysDisplay) {
+            daysDisplay.textContent = '';
+        }
+    }
+
+    /**
+     * Save form data to localStorage
+     */
+    function saveFormData() {
+        const formData = {};
+        const measures = [];
+        
+        container.querySelectorAll('.measure-block').forEach((block, mIdx) => {
+            const measure = {};
+            
+            // Save all input, textarea, and select values
+            block.querySelectorAll('input:not([type="file"]), textarea, select').forEach(field => {
+                if (field.name) {
+                    const match = field.name.match(/measures\[\d+\]\[(.+)\]/);
+                    if (match) {
+                        const fieldName = match[1].replace(/\[|\]/g, '_');
+                        measure[fieldName] = field.value;
+                    }
+                }
+            });
+            
+            measures.push(measure);
+        });
+        
+        formData.measures = measures;
+        formData.timestamp = new Date().toISOString();
+        
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(formData));
+        } catch (e) {
+            console.warn('Failed to save form data:', e);
+        }
+    }
+
+    /**
+     * Restore form data from localStorage
+     */
+    function restoreFormData() {
+        try {
+            const saved = localStorage.getItem(storageKey);
+            if (!saved) return;
+            
+            const formData = JSON.parse(saved);
+            if (!formData.measures || formData.measures.length === 0) return;
+            
+            // Ask user if they want to restore
+            const timestamp = new Date(formData.timestamp);
+            const confirm = window.confirm(
+                `Found unsaved form data from ${timestamp.toLocaleString()}.\n\nWould you like to restore it?`
+            );
+            
+            if (!confirm) {
+                localStorage.removeItem(storageKey);
+                return;
+            }
+            
+            // Clear existing measures except first one
+            const existingBlocks = container.querySelectorAll('.measure-block');
+            for (let i = 1; i < existingBlocks.length; i++) {
+                existingBlocks[i].remove();
+            }
+            
+            // Restore each measure
+            formData.measures.forEach((measure, mIdx) => {
+                if (mIdx > 0) {
+                    // Add new measure block
+                    const newMeasure = tplMeasure.content.cloneNode(true);
+                    container.appendChild(newMeasure);
+                }
+                
+                const block = container.querySelectorAll('.measure-block')[mIdx];
+                
+                // Restore field values
+                Object.keys(measure).forEach(key => {
+                    const fieldName = key.replace(/_/g, '][').replace(/\]\[(\d+)\]\[/, '][steps][$1][');
+                    const selector = `[name="measures[${mIdx}][${fieldName}]"]`;
+                    const field = block.querySelector(selector);
+                    
+                    if (field && measure[key]) {
+                        field.value = measure[key];
+                    }
+                });
+            });
+            
+            reindex();
+            
+            // Update days displays
+            container.querySelectorAll('.measure-block').forEach(block => {
+                updateDaysDisplay(block);
+            });
+            
+        } catch (e) {
+            console.warn('Failed to restore form data:', e);
+            localStorage.removeItem(storageKey);
+        }
+    }
+
+    /**
+     * Clear saved form data
+     */
+    function clearFormData() {
+        localStorage.removeItem(storageKey);
+    }
 
     /**
      * Reindexes all measure blocks and their steps to ensure proper form field naming
@@ -316,7 +452,24 @@ document.addEventListener('DOMContentLoaded', function() {
         reindex();
     });
 
-    document.getElementById('wizard-form').addEventListener('submit', function(e) {
+    // Handle date changes for days calculation
+    container.addEventListener('change', function(e) {
+        if (e.target.classList.contains('date-input')) {
+            const measureBlock = e.target.closest('.measure-block');
+            updateDaysDisplay(measureBlock);
+            saveFormData(); // Auto-save on change
+        }
+    });
+
+    // Auto-save form data on any input change
+    container.addEventListener('input', function(e) {
+        if (e.target.matches('input, textarea, select')) {
+            saveFormData();
+        }
+    });
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
         let hasErrors = false;
         container.querySelectorAll('.measure-block').forEach((block, index) => {
             const nameInput = block.querySelector('input[name$="[name]"]');
@@ -325,12 +478,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`Measure ${index + 1} must have a name.`);
             }
         });
+        
         if (hasErrors) {
             e.preventDefault();
+        } else {
+            // Clear saved data on successful submission
+            clearFormData();
         }
     });
 
+    // Initialize: restore saved data if exists
+    restoreFormData();
+    
+    // Initial reindex and days calculation
     reindex();
+    container.querySelectorAll('.measure-block').forEach(block => {
+        updateDaysDisplay(block);
+    });
+
+    // Warn user before leaving with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 });
 </script>
 {% endblock %}
