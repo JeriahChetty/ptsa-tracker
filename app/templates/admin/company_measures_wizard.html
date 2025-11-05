@@ -23,6 +23,23 @@
     Creating measures for: <strong>{{ company.name }}</strong>
 </div>
 
+<!-- Document Upload Section -->
+<div class="card mb-4">
+  <div class="card-header bg-light">
+    <h6 class="mb-0"><i class="fas fa-file-upload me-2"></i>Quick Import from Document</h6>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">Upload a PDF or PowerPoint file to automatically populate the measure form below.</p>
+    <div class="input-group">
+      <input type="file" class="form-control" id="documentUpload" accept=".pdf,.ppt,.pptx">
+      <button class="btn btn-primary" type="button" id="parseDocumentBtn">
+        <i class="fas fa-magic me-1"></i>Parse Document
+      </button>
+    </div>
+    <div id="parseStatus" class="mt-2"></div>
+  </div>
+</div>
+
 <form method="POST" action="{{ url_for('admin.company_measures_wizard', company_id=company.id) }}" enctype="multipart/form-data" id="wizard-form" novalidate>
 
     <div id="measures-container" class="d-grid gap-3">
@@ -504,6 +521,134 @@ document.addEventListener('DOMContentLoaded', function() {
             e.returnValue = '';
         }
     });
+
+    // ===== DOCUMENT PARSING FEATURE =====
+    const documentUpload = document.getElementById('documentUpload');
+    const parseDocumentBtn = document.getElementById('parseDocumentBtn');
+    const parseStatus = document.getElementById('parseStatus');
+
+    parseDocumentBtn.addEventListener('click', async function() {
+        const file = documentUpload.files[0];
+        if (!file) {
+            parseStatus.innerHTML = '<div class="alert alert-warning">Please select a file first.</div>';
+            return;
+        }
+
+        // Show loading state
+        parseStatus.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Parsing document...</div>';
+        parseDocumentBtn.disabled = true;
+
+        // Create FormData and upload
+        const formData = new FormData();
+        formData.append('document', file);
+
+        try {
+            const response = await fetch('{{ url_for("admin.parse_measure_document") }}', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Populate form with extracted data
+                populateFormFromDocument(result.data);
+                parseStatus.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Document parsed successfully! Form populated below.</div>';
+                
+                // Auto-save after population
+                saveFormData();
+            } else {
+                parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${result.error || 'Failed to parse document'}</div>`;
+            }
+        } catch (error) {
+            parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${error.message}</div>`;
+        } finally {
+            parseDocumentBtn.disabled = false;
+        }
+    });
+
+    function populateFormFromDocument(data) {
+        // Get the first measure block
+        const block = container.querySelector('.measure-block');
+        
+        // Populate basic fields
+        if (data.name) {
+            const nameInput = block.querySelector('input[name$="[name]"]');
+            if (nameInput) nameInput.value = data.name;
+        }
+        
+        if (data.target) {
+            const targetInput = block.querySelector('input[name$="[target]"]');
+            if (targetInput) targetInput.value = data.target;
+        }
+        
+        if (data.measure_detail) {
+            const detailInput = block.querySelector('textarea[name$="[measure_detail]"]');
+            if (detailInput) detailInput.value = data.measure_detail;
+        }
+        
+        if (data.departments) {
+            const deptInput = block.querySelector('input[name$="[departments]"]');
+            if (deptInput) deptInput.value = data.departments;
+        }
+        
+        if (data.responsible) {
+            const respInput = block.querySelector('input[name$="[responsible]"]');
+            if (respInput) respInput.value = data.responsible;
+        }
+        
+        if (data.participants) {
+            const partInput = block.querySelector('input[name$="[participants]"]');
+            if (partInput) partInput.value = data.participants;
+        }
+        
+        if (data.start_date) {
+            const startInput = block.querySelector('input[name$="[start_date]"]');
+            if (startInput) startInput.value = data.start_date;
+        }
+        
+        if (data.end_date) {
+            const endInput = block.querySelector('input[name$="[end_date]"]');
+            if (endInput) endInput.value = data.end_date;
+        }
+        
+        // Update days display
+        updateDaysDisplay(block);
+        
+        // Populate steps
+        if (data.steps && data.steps.length > 0) {
+            const stepsContainer = block.querySelector('.steps-container');
+            // Clear existing steps
+            stepsContainer.innerHTML = '';
+            
+            // Add each step
+            data.steps.forEach((stepTitle, index) => {
+                const stepHtml = `
+                    <div class="step-item border rounded p-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-12">
+                                <label class="form-label">Steps</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input name="measures[0][steps][${index}][title]" class="form-control" value="${stepTitle}" placeholder="e.g., Sort (Seiri)">
+                                    <span class="badge bg-primary step-number" style="min-width: 60px; font-size: 0.875rem;">Step ${index + 1}</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Add Image (when applicable)</label>
+                                <input name="measures[0][steps][${index}][files][]" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-step">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                stepsContainer.insertAdjacentHTML('beforeend', stepHtml);
+            });
+            
+            reindex();
+        }
+    }
 });
 </script>
 {% endblock %}

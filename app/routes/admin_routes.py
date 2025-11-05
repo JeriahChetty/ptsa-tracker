@@ -1996,3 +1996,59 @@ def admin_profile():
     return render_template("admin/admin_profile.html", user=current_user, editing=editing)
 
 
+# ---------------------------------------------------------------------------
+# Document Parsing Route
+# ---------------------------------------------------------------------------
+@admin_bp.route("/parse-measure-document", methods=["POST"])
+@login_required
+def parse_measure_document():
+    """Parse uploaded PDF or PowerPoint document to extract measure data"""
+    import os
+    import tempfile
+    from werkzeug.utils import secure_filename
+    from app.utils.document_parser import parse_measure_document as parse_doc
+    
+    try:
+        if 'document' not in request.files:
+            return {'success': False, 'error': 'No file uploaded'}, 400
+        
+        file = request.files['document']
+        if file.filename == '':
+            return {'success': False, 'error': 'No file selected'}, 400
+        
+        # Get file extension
+        filename = secure_filename(file.filename)
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        
+        if file_ext not in ['pdf', 'ppt', 'pptx']:
+            return {'success': False, 'error': 'Unsupported file type. Please upload PDF or PowerPoint files.'}, 400
+        
+        # Save to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}') as tmp_file:
+            file.save(tmp_file.name)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Parse the document
+            data = parse_doc(tmp_path, file_ext)
+            
+            # Convert date objects to strings for JSON serialization
+            if data.get('start_date'):
+                data['start_date'] = data['start_date'].isoformat()
+            if data.get('end_date'):
+                data['end_date'] = data['end_date'].isoformat()
+            
+            return {'success': True, 'data': data}, 200
+            
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
+                
+    except Exception as e:
+        current_app.logger.error(f"Error parsing document: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+
