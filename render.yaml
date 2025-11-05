@@ -1,10 +1,11 @@
 services:
   - type: web
     name: ptsa-tracker
-    env: docker
-    dockerfilePath: ./Dockerfile.render
+    env: python
     plan: free
     region: singapore
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
     # Persistent disk to prevent data loss on restart
     disk:
       name: ptsa-data
