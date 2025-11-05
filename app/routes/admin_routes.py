@@ -2020,8 +2020,8 @@ def parse_measure_document():
         filename = secure_filename(file.filename)
         file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
         
-        if file_ext not in ['pdf', 'ppt', 'pptx']:
-            return {'success': False, 'error': 'Unsupported file type. Please upload PDF or PowerPoint files.'}, 400
+        if file_ext not in ['pdf', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp']:
+            return {'success': False, 'error': 'Unsupported file type. Please upload PDF, PowerPoint, or image files.'}, 400
         
         # Save to temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}') as tmp_file:
@@ -2029,16 +2029,25 @@ def parse_measure_document():
             tmp_path = tmp_file.name
         
         try:
-            # Parse the document
-            data = parse_doc(tmp_path, file_ext)
+            # Parse the document (AI-enabled by default if API key is available)
+            result = parse_doc(tmp_path, file_ext, use_ai=True)
             
             # Convert date objects to strings for JSON serialization
-            if data.get('start_date'):
-                data['start_date'] = data['start_date'].isoformat()
-            if data.get('end_date'):
-                data['end_date'] = data['end_date'].isoformat()
+            measures = result.get('measures', [])
+            for measure in measures:
+                if measure.get('start_date'):
+                    measure['start_date'] = measure['start_date'].isoformat() if hasattr(measure['start_date'], 'isoformat') else measure['start_date']
+                if measure.get('end_date'):
+                    measure['end_date'] = measure['end_date'].isoformat() if hasattr(measure['end_date'], 'isoformat') else measure['end_date']
             
-            return {'success': True, 'data': data}, 200
+            return {
+                'success': True, 
+                'data': {
+                    'measures': measures,
+                    'count': len(measures),
+                    'method': result.get('method', 'unknown')
+                }
+            }, 200
             
         finally:
             # Clean up temporary file

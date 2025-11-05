@@ -373,6 +373,21 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <!-- Document Upload Section -->
+          <div class="card mb-3 bg-light">
+            <div class="card-body">
+              <h6 class="mb-2"><i class="fas fa-file-upload me-2"></i>Quick Import from Document</h6>
+              <p class="text-muted small mb-2">Upload a PDF, PowerPoint, or image file to auto-populate the form.</p>
+              <div class="input-group input-group-sm">
+                <input type="file" class="form-control" id="modalDocumentUpload" accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp">
+                <button class="btn btn-primary" type="button" id="parseModalDocumentBtn">
+                  <i class="fas fa-magic me-1"></i>Parse
+                </button>
+              </div>
+              <div id="modalParseStatus" class="mt-2"></div>
+            </div>
+          </div>
+          
           <!-- Basic Info Section -->
           <div class="card mb-3">
             <div class="card-header">
@@ -993,6 +1008,99 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modalStartDate && modalEndDate) {
     modalStartDate.addEventListener('change', updateModalDuration);
     modalEndDate.addEventListener('change', updateModalDuration);
+  }
+  
+  // ===== MODAL DOCUMENT PARSING =====
+  const modalDocumentUpload = document.getElementById('modalDocumentUpload');
+  const parseModalDocumentBtn = document.getElementById('parseModalDocumentBtn');
+  const modalParseStatus = document.getElementById('modalParseStatus');
+  
+  if (parseModalDocumentBtn) {
+    parseModalDocumentBtn.addEventListener('click', async function() {
+      const file = modalDocumentUpload.files[0];
+      if (!file) {
+        modalParseStatus.innerHTML = '<div class="alert alert-warning alert-sm">Please select a file first.</div>';
+        return;
+      }
+      
+      // Show loading
+      modalParseStatus.innerHTML = '<div class="alert alert-info alert-sm"><i class="fas fa-spinner fa-spin me-2"></i>Parsing...</div>';
+      parseModalDocumentBtn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('document', file);
+      
+      try {
+        const response = await fetch('{{ url_for("admin.parse_measure_document") }}', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          const measures = result.data.measures || [];
+          const method = result.data.method || 'pattern_matching';
+          
+          if (measures.length > 0) {
+            // Populate with first measure (modal only supports single measure)
+            populateModalFromData(measures[0]);
+            
+            const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI</span>' : '<span class="badge bg-info">Pattern</span>';
+            let msg = `<div class="alert alert-success alert-sm"><i class="fas fa-check me-1"></i>Parsed! ${methodBadge}`;
+            if (measures.length > 1) {
+              msg += ` <small>(${measures.length} measures found, showing first)</small>`;
+            }
+            msg += '</div>';
+            modalParseStatus.innerHTML = msg;
+          } else {
+            modalParseStatus.innerHTML = '<div class="alert alert-warning alert-sm">No measures found.</div>';
+          }
+        } else {
+          modalParseStatus.innerHTML = `<div class="alert alert-danger alert-sm">Error: ${result.error || 'Failed'}</div>`;
+        }
+      } catch (error) {
+        modalParseStatus.innerHTML = `<div class="alert alert-danger alert-sm">Error: ${error.message}</div>`;
+      } finally {
+        parseModalDocumentBtn.disabled = false;
+      }
+    });
+  }
+  
+  function populateModalFromData(data) {
+    if (data.name) document.getElementById('modal_name').value = data.name;
+    if (data.target) document.getElementById('modal_target').value = data.target;
+    if (data.measure_detail) document.getElementById('modal_measure_detail').value = data.measure_detail;
+    if (data.departments) document.getElementById('modal_departments').value = data.departments;
+    if (data.responsible) document.getElementById('modal_responsible').value = data.responsible;
+    if (data.participants) document.getElementById('modal_participants').value = data.participants;
+    if (data.start_date) document.getElementById('modal_start_date').value = data.start_date;
+    if (data.end_date) document.getElementById('modal_end_date').value = data.end_date;
+    
+    // Update duration display
+    updateModalDuration();
+    
+    // Populate steps
+    if (data.steps && data.steps.length > 0) {
+      modalStepsContainer.innerHTML = '';
+      data.steps.forEach((stepTitle, index) => {
+        const stepHtml = `
+          <div class="modal-step-item border rounded p-3">
+            <div class="d-flex align-items-start">
+              <span class="badge bg-primary me-2" style="min-width: 60px;">Step ${index + 1}</span>
+              <div class="flex-grow-1">
+                <input type="text" class="form-control form-control-sm" name="step_titles[]" value="${stepTitle}" required>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-modal-step">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        modalStepsContainer.insertAdjacentHTML('beforeend', stepHtml);
+      });
+      updateModalStepNumbers();
+    }
   }
 });
 </script>
