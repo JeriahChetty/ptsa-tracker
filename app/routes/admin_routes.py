@@ -982,18 +982,20 @@ def company_measures_wizard(company_id: int):
             except (ValueError, TypeError):
                 urgency = None
 
-            try:
-                duration_days = int(data.get('duration_days')) if data.get('duration_days') else None
-            except (ValueError, TypeError):
-                duration_days = None
-
             # Parse date fields
-            timeframe_date = None
-            if data.get('timeframe_date'):
+            start_date = None
+            if data.get('start_date'):
                 try:
-                    timeframe_date = datetime.fromisoformat(data.get('timeframe_date').strip()).date()
+                    start_date = datetime.fromisoformat(data.get('start_date').strip()).date()
                 except Exception:
-                    timeframe_date = None
+                    start_date = None
+            
+            end_date = None
+            if data.get('end_date'):
+                try:
+                    end_date = datetime.fromisoformat(data.get('end_date').strip()).date()
+                except Exception:
+                    end_date = None
 
             # Get steps (handled differently in the form)
             step_lines = []
@@ -1006,7 +1008,7 @@ def company_measures_wizard(company_id: int):
             m = Measure.query.filter_by(name=name).first()
             if not m:
                 current_app.logger.info(f"Creating new measure: {name}")
-                # Create measure with only the fields that exist in the model
+                # Create measure with the fields that exist in the model
                 m = Measure(
                     name=name,
                     measure_detail=description,
@@ -1014,23 +1016,9 @@ def company_measures_wizard(company_id: int):
                     departments=departments,
                     responsible=responsible,
                     participants=participants,
+                    start_date=start_date,
+                    end_date=end_date,
                 )
-                
-                # Set other fields only if they exist in the model
-                if hasattr(Measure, 'default_duration_days'):
-                    m.default_duration_days = duration_days
-                elif hasattr(Measure, 'duration_days'):
-                    m.duration_days = duration_days
-                    
-                if hasattr(Measure, 'default_urgency'):
-                    m.default_urgency = urgency
-                elif hasattr(Measure, 'urgency'):
-                    m.urgency = urgency
-                    
-                if hasattr(Measure, 'default_timeframe_date'):
-                    m.default_timeframe_date = timeframe_date
-                elif hasattr(Measure, 'timeframe_date'):
-                    m.timeframe_date = timeframe_date
                 
                 db.session.add(m)
                 db.session.flush()  # Get the ID
@@ -1047,24 +1035,17 @@ def company_measures_wizard(company_id: int):
                 measure_id=m.id,
                 status="Not Started",
                 created_at=datetime.utcnow(),
-                urgency=urgency if urgency is not None else getattr(m, "default_urgency", None),
+                urgency=urgency,
                 target=m.target,
                 departments=m.departments,
                 responsible=m.responsible,
                 participants=m.participants,
             )
 
-            # derive due_at from measure defaults if present
-            m_timeframe = getattr(m, "default_timeframe_date", None) or getattr(m, "timeframe_date", None)
-            m_duration = getattr(m, "default_duration_days", None) or getattr(m, "duration_days", None)
-            if m_timeframe:
+            # Set due_at from measure's end_date if present
+            if m.end_date:
                 try:
-                    a.due_at = datetime.combine(m_timeframe, datetime.max.time())
-                except Exception:
-                    a.due_at = None
-            elif m_duration:
-                try:
-                    a.due_at = datetime.utcnow() + timedelta(days=int(m_duration))
+                    a.due_at = datetime.combine(m.end_date, datetime.max.time())
                 except Exception:
                     a.due_at = None
 
