@@ -1040,6 +1040,8 @@ def company_measures_wizard(company_id: int):
                 departments=m.departments,
                 responsible=m.responsible,
                 participants=m.participants,
+                start_date=m.start_date,
+                end_date=m.end_date,
             )
 
             # Set due_at from measure's end_date if present

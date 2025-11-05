@@ -29,15 +29,41 @@
       <div class="card-body">
         <p><strong>Description:</strong> {{ measure.measure_detail|default('No description provided.') }}</p>
         <p><strong>Target:</strong> {{ measure.target|default('Not specified.') }}</p>
-        <p><strong>Due Date:</strong> 
-          {% if assignment.due_at %}
-            <span class="{{ 'text-danger fw-bold' if assignment.is_overdue else '' }}">
-              {{ assignment.due_at.strftime('%Y-%m-%d') }}
-            </span>
-          {% else %}
-            <span class="text-muted">Not set</span>
+        
+        <!-- Timeframe Section -->
+        <div class="row g-3 mt-2">
+          <div class="col-md-6">
+            <p class="mb-1"><strong>Start Date:</strong></p>
+            <p class="text-muted">
+              {% if assignment.start_date %}
+                {{ assignment.start_date.strftime('%Y-%m-%d') }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </p>
+          </div>
+          <div class="col-md-6">
+            <p class="mb-1"><strong>Due Date:</strong></p>
+            <p class="{{ 'text-danger fw-bold' if assignment.is_overdue else 'text-muted' }}">
+              {% if assignment.due_at %}
+                {{ assignment.due_at.strftime('%Y-%m-%d') }}
+              {% else %}
+                Not set
+              {% endif %}
+            </p>
+          </div>
+          {% if assignment.start_date and assignment.end_date %}
+          <div class="col-12">
+            <div class="alert alert-info mb-0">
+              <i class="fas fa-calendar-alt me-2"></i>
+              <strong>Timeframe:</strong> 
+              {% set duration_days = (assignment.end_date - assignment.start_date).days %}
+              {{ duration_days }} day{{ 's' if duration_days != 1 else '' }} 
+              ({{ assignment.start_date.strftime('%b %d') }} - {{ assignment.end_date.strftime('%b %d, %Y') }})
+            </div>
+          </div>
           {% endif %}
-        </p>
+        </div>
       </div>
     </div>
 
