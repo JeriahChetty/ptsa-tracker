@@ -34,22 +34,30 @@ def login():
             user = User.query.filter(db.func.lower(User.email) == email).first()
 
             if user and user.is_active and check_password_hash(user.password, password_input):
-                login_user(user, remember=True)
-                
-                # Initialize session for middleware
-                session['last_activity'] = datetime.utcnow().isoformat()
-                session.permanent = True
-
-                # Redirect based on role
-                next_page = request.args.get("next")
-                if next_page:
-                    return redirect(next_page)
-                elif user.role == "admin":
-                    return redirect(url_for("admin.dashboard"))
-                elif user.role == "company":
-                    return redirect(url_for("company.dashboard"))
-                else:
-                    return redirect(url_for("main.index"))
+                try:
+                    login_user(user, remember=True)
+                    
+                    # Initialize session for middleware
+                    session['last_activity'] = datetime.utcnow().isoformat()
+                    session.permanent = True
+                    
+                    current_app.logger.info(f"User {email} logged in successfully with role {user.role}")
+                    
+                    # Redirect based on role
+                    next_page = request.args.get("next")
+                    if next_page:
+                        return redirect(next_page)
+                    elif user.role == "admin":
+                        return redirect(url_for("admin.dashboard"))
+                    elif user.role == "company":
+                        return redirect(url_for("company.dashboard"))
+                    else:
+                        return redirect(url_for("main.index"))
+                except Exception as redirect_error:
+                    current_app.logger.error(f"Post-login redirect error for {email}: {str(redirect_error)}")
+                    db.session.rollback()
+                    flash("Login successful but redirect failed. Please contact support.", "warning")
+                    return render_template("auth/login.html")
             else:
                 # Debug info (remove in production)
                 if user:
@@ -61,7 +69,8 @@ def login():
 
                 flash("Invalid email or password.", "danger")
         except Exception as e:
-            current_app.logger.error(f"Login error: {str(e)}")
+            current_app.logger.error(f"Login error: {str(e)}", exc_info=True)
+            db.session.rollback()
             flash("An error occurred during login. Please try again.", "danger")
 
     return render_template("auth/login.html")

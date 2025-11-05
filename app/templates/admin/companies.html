@@ -219,24 +219,31 @@
                 <td>{{ c.phone or '—' }}</td>
                 <td class="text-end">
                   <div class="btn-group btn-group-sm" role="group" aria-label="Actions for {{ c.name }}">
-                    <!-- Assign existing measures (go to Measures page, optionally prefilter by company) -->
-                    <a class="btn btn-outline-primary"
-                       href="{{ url_for('admin.measures', company_id=c.id) }}"
-                       title="Assign existing measures">
-                      Assign Existing
-                    </a>
-                    <!-- Add new measures & steps, with attachments, and auto-assign to this company -->
-                    <a class="btn btn-outline-secondary"
-                       href="{{ url_for('admin.company_measures_wizard', company_id=c.id) }}"
-                       title="Create new measures and assign to this company">
-                      Add New & Assign
-                    </a>
                     <!-- View company profile -->
                     <a class="btn btn-outline-info"
                        href="{{ url_for('admin.company_profile', company_id=c.id) }}"
                        title="View company profile">
-                      View Profile
+                      <i class="fas fa-eye me-1"></i>View
                     </a>
+                    <!-- Edit company -->
+                    <a class="btn btn-outline-primary"
+                       href="{{ url_for('admin.edit_company', company_id=c.id) }}"
+                       title="Edit company">
+                      <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <!-- Assign existing measures (go to Measures page, optionally prefilter by company) -->
+                    <a class="btn btn-outline-secondary"
+                       href="{{ url_for('admin.measures', company_id=c.id) }}"
+                       title="Assign existing measures">
+                      <i class="fas fa-tasks me-1"></i>Assign
+                    </a>
+                    <!-- Delete company -->
+                    <button type="button" class="btn btn-outline-danger delete-company-btn" 
+                            data-company-id="{{ c.id }}"
+                            data-company-name="{{ c.name }}"
+                            title="Delete company">
+                      <i class="fas fa-trash me-1"></i>Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -321,6 +328,23 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+});
+
+// Delete company function
+document.querySelectorAll('.delete-company-btn').forEach(button => {
+  button.addEventListener('click', function() {
+    const companyId = this.dataset.companyId;
+    const companyName = this.dataset.companyName;
+    
+    if (confirm(`Are you sure you want to delete ${companyName}? This action cannot be undone and will also delete all associated data including users, measures, and assignments.`)) {
+      // Create a form and submit it
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/admin/companies/${companyId}/delete`;
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
 });
 </script>
 {% endblock %}

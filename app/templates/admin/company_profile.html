@@ -54,12 +54,11 @@
             <input type="text" class="form-control" id="industry_category" name="industry_category" value="{{ company.industry_category or '' }}">
           </div>
           <div class="mb-3">
-            <label for="membership" class="form-label">Membership Level</label>
+            <label for="membership" class="form-label">Membership Status</label>
             <select class="form-select" id="membership" name="membership">
               <option value="">Not specified</option>
-              <option value="Platinum" {% if company.membership == 'Platinum' %}selected{% endif %}>Platinum</option>
-              <option value="Gold" {% if company.membership == 'Gold' %}selected{% endif %}>Gold</option>
-              <option value="Silver" {% if company.membership == 'Silver' %}selected{% endif %}>Silver</option>
+              <option value="Member" {% if company.membership == 'Member' %}selected{% endif %}>Member</option>
+              <option value="Non-member" {% if company.membership == 'Non-member' %}selected{% endif %}>Non-member</option>
             </select>
           </div>
           <div class="mb-3">
@@ -90,9 +89,9 @@
           <div>{{ company.industry_category or 'Not specified' }}</div>
         </div>
         <div class="mb-3">
-          <label class="form-label text-muted">Membership Level</label>
+          <label class="form-label text-muted">Membership Status</label>
           <div>
-            <span class="badge bg-{% if company.membership == 'Platinum' %}warning{% elif company.membership == 'Gold' %}primary{% elif company.membership == 'Silver' %}secondary{% else %}light{% endif %}">
+            <span class="badge bg-{% if company.membership == 'Member' %}success{% elif company.membership == 'Non-member' %}secondary{% else %}light{% endif %}">
               {{ company.membership or 'Not specified' }}
             </span>
           </div>
