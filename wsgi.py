@@ -30,19 +30,20 @@ with app.app_context():
         from app.models import User
         from werkzeug.security import generate_password_hash
         
-        admin_count = User.query.filter_by(role='admin').count()
-        if admin_count == 0:
+        # Create default admin user if none exists
+        admin = User.query.filter_by(email='info@ptsa.co.za').first()
+        if not admin:
             admin = User(
-                email='admin@ptsa.co.za',
-                password=generate_password_hash('admin123'),
+                email='info@ptsa.co.za',
+                password=generate_password_hash('info123'),
                 role='admin',
                 is_active=True
             )
             db.session.add(admin)
             db.session.commit()
-            logger.info("✓ Default admin user created")
+            logger.info("✓ Default admin user created: info@ptsa.co.za")
         else:
-            logger.info(f"✓ Found {admin_count} admin user(s)")
+            logger.info(f"✓ Admin user exists: {admin.email}")
             
     except Exception as e:
         logger.error(f"✗ Database initialization error: {e}")
