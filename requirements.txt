@@ -14,5 +14,5 @@ openpyxl==3.1.2
 Pillow==10.4.0
 typing_extensions==4.14.1
 email-validator==2.0.0
-pyodbc==4.0.35
+pyodbc==5.2.0
 
