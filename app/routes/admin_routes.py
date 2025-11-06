@@ -1723,28 +1723,6 @@ def add_step(measure_id):
     return redirect(url_for("admin.measure_profile", measure_id=measure_id))
 
 
-@admin_bp.route("/users/<int:user_id>/toggle-status", methods=["POST"])
-@login_required
-def toggle_user_status(user_id):
-    user = User.query.get_or_404(user_id)
-    
-    # Only admins can toggle status and can't deactivate themselves
-    if getattr(current_user, "role", "") != "admin" or user.id == current_user.id:
-        flash("You don't have permission to perform this action.", "danger")
-        return redirect(url_for("admin.companies"))
-    
-    user.is_active = not user.is_active
-    db.session.commit()
-    
-    status = "activated" if user.is_active else "deactivated"
-    flash(f"User {user.email} has been {status}.", "success")
-    
-    # Redirect back to the company profile
-    if user.company_id:
-        return redirect(url_for("admin.company_profile", company_id=user.company_id))
-    else:
-        return redirect(url_for("admin.users"))
-
 @admin_bp.route("/companies/<int:company_id>/add-user", methods=["GET", "POST"])
 @login_required
 def add_company_user(company_id):
