@@ -425,9 +425,6 @@ def create_measure():
         participants = request.form.get("participants", "").strip()
         start_date = request.form.get("start_date")
         end_date = request.form.get("end_date")
-        default_duration_days = request.form.get("default_duration_days", type=int)
-        default_urgency = request.form.get("default_urgency", type=int)
-        default_timeframe_date = request.form.get("default_timeframe_date") or None
 
         if not name:
             flash("Measure name is required.", "warning")
@@ -442,13 +439,6 @@ def create_measure():
             participants=participants or None,
             start_date=datetime.fromisoformat(start_date).date() if start_date else None,
             end_date=datetime.fromisoformat(end_date).date() if end_date else None,
-            default_duration_days=default_duration_days,
-            default_urgency=default_urgency,
-            default_timeframe_date=(
-                datetime.fromisoformat(default_timeframe_date).date()
-                if default_timeframe_date
-                else None
-            ),
         )
         db.session.add(m)
         db.session.flush()
