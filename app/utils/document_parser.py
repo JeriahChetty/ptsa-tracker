@@ -45,6 +45,13 @@ def parse_measure_document(file_path: str, file_type: str, use_ai: bool = True) 
             else:
                 return {'measures': [], 'method': 'error', 'error': 'No text extracted from image'}
         except Exception as e:
+            # Tesseract not available - provide helpful error
+            if 'not installed' in str(e) or 'not in your PATH' in str(e):
+                return {
+                    'measures': [], 
+                    'method': 'error', 
+                    'error': 'Image parsing requires OpenAI API key. Add OPENAI_API_KEY to your environment variables or upload a PDF/PowerPoint instead.'
+                }
             return {'measures': [], 'method': 'error', 'error': f'OCR failed: {str(e)}'}
     
     # Handle PDF/PowerPoint
