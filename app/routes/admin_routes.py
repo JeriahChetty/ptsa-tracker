@@ -1048,6 +1048,11 @@ def company_measures_wizard(company_id: int):
 
             # Create assignment for this company
             current_app.logger.info(f"Creating assignment for measure: {name} (ID: {m.id}) to company: {company.name}")
+            
+            # Set dates: use measure dates if available, otherwise use defaults
+            assignment_start = m.start_date if m.start_date else datetime.utcnow().date()
+            assignment_end = m.end_date if m.end_date else (datetime.utcnow() + timedelta(days=30)).date()
+            
             a = MeasureAssignment(
                 company_id=company.id,
                 measure_id=m.id,
@@ -1058,14 +1063,14 @@ def company_measures_wizard(company_id: int):
                 departments=m.departments,
                 responsible=m.responsible,
                 participants=m.participants,
-                start_date=m.start_date,
-                end_date=m.end_date,
+                start_date=assignment_start,
+                end_date=assignment_end,
             )
 
-            # Set due_at from measure's end_date if present
-            if m.end_date:
+            # Set due_at from end_date
+            if assignment_end:
                 try:
-                    a.due_at = datetime.combine(m.end_date, datetime.max.time())
+                    a.due_at = datetime.combine(assignment_end, datetime.max.time())
                 except Exception:
                     a.due_at = None
 

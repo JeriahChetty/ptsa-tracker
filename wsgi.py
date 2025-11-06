@@ -52,6 +52,31 @@ with app.app_context():
         except Exception as col_error:
             logger.error(f"Error checking/adding order column: {col_error}")
         
+        # Backfill missing dates for existing assignments
+        try:
+            from app.models import MeasureAssignment
+            from datetime import timedelta
+            assignments_without_dates = MeasureAssignment.query.filter(
+                (MeasureAssignment.start_date == None) | (MeasureAssignment.end_date == None)
+            ).all()
+            
+            if assignments_without_dates:
+                logger.info(f"⚠️  Found {len(assignments_without_dates)} assignments without dates, backfilling...")
+                for assignment in assignments_without_dates:
+                    if not assignment.start_date:
+                        assignment.start_date = assignment.created_at.date() if assignment.created_at else datetime.utcnow().date()
+                    if not assignment.end_date:
+                        assignment.end_date = assignment.start_date + timedelta(days=30)
+                    if not assignment.due_at and assignment.end_date:
+                        assignment.due_at = datetime.combine(assignment.end_date, datetime.max.time())
+                db.session.commit()
+                logger.info(f"✓ Backfilled dates for {len(assignments_without_dates)} assignments")
+            else:
+                logger.info("✓ All assignments have dates set")
+        except Exception as backfill_error:
+            logger.error(f"Error backfilling assignment dates: {backfill_error}")
+            db.session.rollback()
+        
         # Create default admin if needed
         from app.models import User
         from werkzeug.security import generate_password_hash
