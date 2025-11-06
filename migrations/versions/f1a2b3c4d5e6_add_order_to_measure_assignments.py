@@ -1,7 +1,7 @@
 """Add order column to measure_assignments
 
 Revision ID: f1a2b3c4d5e6
-Revises: 0e2db249053b
+Revises: 85bf436b1b65
 Create Date: 2025-11-06 10:32:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'f1a2b3c4d5e6'
-down_revision = '0e2db249053b'
+down_revision = '85bf436b1b65'
 branch_labels = None
 depends_on = None
 
