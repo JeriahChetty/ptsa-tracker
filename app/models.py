@@ -457,4 +457,23 @@ class AssignmentReport(TimestampMixin, db.Model):
     def __repr__(self) -> str:
         return f"<AssignmentReport {self.id} assignment={self.assignment_id}>"
 
+# ---------- Activity Log ----------
+class ActivityLog(TimestampMixin, db.Model):
+    __tablename__ = "activity_logs"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    action = db.Column(db.String(64), nullable=False, index=True)  # 'create', 'update', 'delete', 'login', 'logout'
+    entity_type = db.Column(db.String(64), nullable=True, index=True)  # 'measure', 'company', 'user', 'assignment', etc.
+    entity_id = db.Column(db.Integer, nullable=True, index=True)
+    entity_name = db.Column(db.String(255), nullable=True)  # Store name for reference even if entity deleted
+    details = db.Column(db.Text, nullable=True)  # JSON or text details about the action
+    ip_address = db.Column(db.String(64), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    
+    user = db.relationship("User", backref="activity_logs")
+    
+    def __repr__(self) -> str:
+        return f"<ActivityLog {self.id} {self.user_id} {self.action} {self.entity_type}>"
+
 # ---------- Benchmarking ----------

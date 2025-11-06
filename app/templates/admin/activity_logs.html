@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Logs{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="fas fa-history me-2"></i>Activity Logs</h2>
+      <p class="text-muted mb-0">Monitor all user actions in the system</p>
+    </div>
+    <div>
+      <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Users
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+    </div>
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('admin.activity_logs') }}">
+        <div class="row">
+          <div class="col-md-3">
+            <label for="user_filter" class="form-label">User</label>
+            <select class="form-select" id="user_filter" name="user_id">
+              <option value="">All Users</option>
+              {% for user in users %}
+              <option value="{{ user.id }}" {% if current_filters.user_id == user.id %}selected{% endif %}>
+                {{ user.email }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="action_filter" class="form-label">Action</label>
+            <select class="form-select" id="action_filter" name="action">
+              <option value="">All Actions</option>
+              {% for action in actions %}
+              <option value="{{ action }}" {% if current_filters.action == action %}selected{% endif %}>
+                {{ action|title }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="entity_filter" class="form-label">Entity Type</label>
+            <select class="form-select" id="entity_filter" name="entity_type">
+              <option value="">All Types</option>
+              {% for entity in entity_types %}
+              <option value="{{ entity }}" {% if current_filters.entity_type == entity %}selected{% endif %}>
+                {{ entity|title }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary me-2">
+              <i class="fas fa-search me-1"></i>Filter
+            </button>
+            <a href="{{ url_for('admin.activity_logs') }}" class="btn btn-secondary">
+              <i class="fas fa-times me-1"></i>Clear
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Activity Logs Table -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-list me-2"></i>Activity Log ({{ pagination.total }} total)</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if logs %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Timestamp</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Entity</th>
+              <th>Details</th>
+              <th>IP Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>
+                <small class="text-muted">
+                  {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '—' }}
+                </small>
+              </td>
+              <td>
+                {% if log.user %}
+                <strong>{{ log.user.email }}</strong>
+                {% if log.user.role == 'admin' %}
+                <span class="badge bg-danger badge-sm">Admin</span>
+                {% endif %}
+                {% else %}
+                <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.action == 'create' %}
+                <span class="badge bg-success"><i class="fas fa-plus-circle me-1"></i>Create</span>
+                {% elif log.action == 'update' %}
+                <span class="badge bg-primary"><i class="fas fa-edit me-1"></i>Update</span>
+                {% elif log.action == 'delete' %}
+                <span class="badge bg-danger"><i class="fas fa-trash me-1"></i>Delete</span>
+                {% elif log.action == 'login' %}
+                <span class="badge bg-info"><i class="fas fa-sign-in-alt me-1"></i>Login</span>
+                {% elif log.action == 'logout' %}
+                <span class="badge bg-secondary"><i class="fas fa-sign-out-alt me-1"></i>Logout</span>
+                {% elif log.action == 'view' %}
+                <span class="badge bg-light text-dark"><i class="fas fa-eye me-1"></i>View</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ log.action }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.entity_type %}
+                <span class="text-muted">{{ log.entity_type|title }}</span>
+                {% if log.entity_name %}
+                <br><small><strong>{{ log.entity_name }}</strong></small>
+                {% endif %}
+                {% if log.entity_id %}
+                <small class="text-muted">(ID: {{ log.entity_id }})</small>
+                {% endif %}
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.details %}
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#detailsModal{{ log.id }}">
+                  <i class="fas fa-info-circle"></i> Details
+                </button>
+                
+                <!-- Details Modal -->
+                <div class="modal fade" id="detailsModal{{ log.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Activity Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">{{ log.details }}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <small class="text-muted font-monospace">{{ log.ip_address or '—' }}</small>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if pagination.pages > 1 %}
+      <div class="card-footer">
+        <nav>
+          <ul class="pagination pagination-sm mb-0 justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('admin.activity_logs', page=pagination.prev_num, user_id=current_filters.user_id, action=current_filters.action, entity_type=current_filters.entity_type) }}">
+                Previous
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+              {% if page_num %}
+                {% if page_num == pagination.page %}
+                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                {% else %}
+                <li class="page-item">
+                  <a class="page-link" href="{{ url_for('admin.activity_logs', page=page_num, user_id=current_filters.user_id, action=current_filters.action, entity_type=current_filters.entity_type) }}">
+                    {{ page_num }}
+                  </a>
+                </li>
+                {% endif %}
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+              {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('admin.activity_logs', page=pagination.next_num, user_id=current_filters.user_id, action=current_filters.action, entity_type=current_filters.entity_type) }}">
+                Next
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="text-center py-5">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No activity logs found</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

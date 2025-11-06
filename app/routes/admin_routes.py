@@ -2126,3 +2126,209 @@ def parse_pasted_text():
         return {'success': False, 'error': str(e)}, 500
 
 
+
+# ===================== USER MANAGEMENT & ACTIVITY LOGS =====================
+
+@admin_bp.route("/users", methods=["GET"])
+@login_required
+def users():
+    """User management page - admin only"""
+    if not current_user.is_admin:
+        flash("Access denied. Admin privileges required.", "error")
+        return redirect(url_for("admin.dashboard"))
+    
+    from app.models import ActivityLog
+    from sqlalchemy import func
+    
+    # Get all users with activity counts
+    all_users = db.session.query(
+        User,
+        func.count(ActivityLog.id).label('activity_count')
+    ).outerjoin(
+        ActivityLog, User.id == ActivityLog.user_id
+    ).group_by(User.id).order_by(User.created_at.desc()).all()
+    
+    users_data = []
+    for user, activity_count in all_users:
+        users_data.append({
+            'user': user,
+            'activity_count': activity_count,
+            'company_name': user.company.name if user.company else None
+        })
+    
+    return render_template(
+        "admin/users.html",
+        users=users_data
+    )
+
+
+@admin_bp.route("/users/create", methods=["POST"])
+@login_required
+def create_user():
+    """Create a new admin user"""
+    if not current_user.is_admin:
+        return {'success': False, 'error': 'Access denied'}, 403
+    
+    from werkzeug.security import generate_password_hash
+    from app.utils.activity_logger import log_create
+    
+    try:
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        role = request.form.get('role', 'company').strip()
+        
+        if not email or not password:
+            flash("Email and password are required", "error")
+            return redirect(url_for('admin.users'))
+        
+        # Check if user exists
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash(f"User with email {email} already exists", "error")
+            return redirect(url_for('admin.users'))
+        
+        # Create user
+        new_user = User(
+            email=email,
+            password=generate_password_hash(password),
+            role=role,
+            is_active=True
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        # Log activity
+        log_create('user', new_user.id, email, {'role': role})
+        
+        flash(f"User {email} created successfully", "success")
+        return redirect(url_for('admin.users'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error creating user: {str(e)}", "error")
+        return redirect(url_for('admin.users'))
+
+
+@admin_bp.route("/users/<int:user_id>/toggle-status", methods=["POST"])
+@login_required
+def toggle_user_status(user_id):
+    """Toggle user active/inactive status"""
+    if not current_user.is_admin:
+        return {'success': False, 'error': 'Access denied'}, 403
+    
+    from app.utils.activity_logger import log_update
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Don't allow deactivating yourself
+        if user.id == current_user.id:
+            flash("Cannot deactivate your own account", "error")
+            return redirect(url_for('admin.users'))
+        
+        user.is_active = not user.is_active
+        db.session.commit()
+        
+        status = "activated" if user.is_active else "deactivated"
+        log_update('user', user.id, user.email, {'action': status})
+        
+        flash(f"User {user.email} {status}", "success")
+        return redirect(url_for('admin.users'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error updating user: {str(e)}", "error")
+        return redirect(url_for('admin.users'))
+
+
+@admin_bp.route("/users/<int:user_id>/delete", methods=["POST"])
+@login_required
+def delete_user(user_id):
+    """Delete a user"""
+    if not current_user.is_admin:
+        return {'success': False, 'error': 'Access denied'}, 403
+    
+    from app.utils.activity_logger import log_delete
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Don't allow deleting yourself
+        if user.id == current_user.id:
+            flash("Cannot delete your own account", "error")
+            return redirect(url_for('admin.users'))
+        
+        email = user.email
+        db.session.delete(user)
+        db.session.commit()
+        
+        log_delete('user', user_id, email)
+        
+        flash(f"User {email} deleted", "success")
+        return redirect(url_for('admin.users'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting user: {str(e)}", "error")
+        return redirect(url_for('admin.users'))
+
+
+@admin_bp.route("/activity-logs", methods=["GET"])
+@login_required
+def activity_logs():
+    """View activity logs - admin only"""
+    if not current_user.is_admin:
+        flash("Access denied. Admin privileges required.", "error")
+        return redirect(url_for("admin.dashboard"))
+    
+    from app.models import ActivityLog
+    from sqlalchemy import desc
+    
+    # Get filter parameters
+    user_id = request.args.get('user_id', type=int)
+    action = request.args.get('action', '').strip()
+    entity_type = request.args.get('entity_type', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Build query
+    query = ActivityLog.query
+    
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+    if action:
+        query = query.filter_by(action=action)
+    if entity_type:
+        query = query.filter_by(entity_type=entity_type)
+    
+    # Paginate
+    pagination = query.order_by(desc(ActivityLog.created_at)).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    # Get unique actions and entity types for filters
+    unique_actions = db.session.query(ActivityLog.action).distinct().all()
+    unique_entities = db.session.query(ActivityLog.entity_type).distinct().all()
+    
+    actions_list = [a[0] for a in unique_actions if a[0]]
+    entities_list = [e[0] for e in unique_entities if e[0]]
+    
+    # Get all users for filter
+    all_users = User.query.order_by(User.email).all()
+    
+    return render_template(
+        "admin/activity_logs.html",
+        logs=pagination.items,
+        pagination=pagination,
+        actions=actions_list,
+        entity_types=entities_list,
+        users=all_users,
+        current_filters={
+            'user_id': user_id,
+            'action': action,
+            'entity_type': entity_type
+        }
+    )

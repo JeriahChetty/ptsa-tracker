@@ -43,6 +43,13 @@ def login():
                     
                     current_app.logger.info(f"User {email} logged in successfully with role {user.role}")
                     
+                    # Log activity
+                    try:
+                        from app.utils.activity_logger import log_login
+                        log_login(email)
+                    except:
+                        pass  # Don't let logging break login
+                    
                     # Redirect based on role
                     next_page = request.args.get("next")
                     if next_page:
@@ -79,6 +86,13 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
+    # Log activity before logout
+    try:
+        from app.utils.activity_logger import log_logout
+        log_logout(current_user.email)
+    except:
+        pass  # Don't let logging break logout
+    
     logout_user()
     flash("You have been logged out.", "success")
     return redirect(url_for("auth.login"))
