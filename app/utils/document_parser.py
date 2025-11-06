@@ -32,10 +32,20 @@ def parse_measure_document(file_path: str, file_type: str, use_ai: bool = True) 
                 if measures:
                     return {'measures': measures, 'method': 'ai_vision'}
             except Exception as e:
-                print(f"AI Vision extraction failed: {e}")
-                return {'measures': [], 'method': 'error', 'error': str(e)}
-        else:
-            return {'measures': [], 'method': 'error', 'error': 'OpenAI API key required for image parsing'}
+                print(f"AI Vision extraction failed, trying Tesseract OCR: {e}")
+                # Fall back to Tesseract OCR
+                pass
+        
+        # Use free Tesseract OCR as fallback
+        try:
+            text = extract_text_from_image_ocr(file_path)
+            if text:
+                measures = extract_multiple_measures(text)
+                return {'measures': measures, 'method': 'tesseract_ocr'}
+            else:
+                return {'measures': [], 'method': 'error', 'error': 'No text extracted from image'}
+        except Exception as e:
+            return {'measures': [], 'method': 'error', 'error': f'OCR failed: {str(e)}'}
     
     # Handle PDF/PowerPoint
     if file_type == 'pdf':
@@ -109,6 +119,34 @@ def parse_powerpoint(file_path: str) -> tuple:
                     pass
     
     return text, images
+
+
+def extract_text_from_image_ocr(file_path: str) -> str:
+    """
+    Extract text from image using free Tesseract OCR
+    
+    Args:
+        file_path: Path to the image file
+    
+    Returns:
+        Extracted text from the image
+    """
+    try:
+        import pytesseract
+        from PIL import Image
+        
+        # Open image
+        image = Image.open(file_path)
+        
+        # Extract text using Tesseract
+        text = pytesseract.image_to_string(image)
+        
+        return text.strip()
+        
+    except ImportError:
+        raise Exception("pytesseract not installed. Install with: pip install pytesseract")
+    except Exception as e:
+        raise Exception(f"Tesseract OCR failed: {str(e)}")
 
 
 def parse_image_with_vision(file_path: str) -> List[Dict]:

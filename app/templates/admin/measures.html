@@ -1049,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI</span>' : 
                               method === 'ai_vision' ? '<span class="badge bg-success">Vision</span>' :
+                              method === 'tesseract_ocr' ? '<span class="badge bg-primary">OCR</span>' :
                               '<span class="badge bg-info">Pattern</span>';
             let msg = `<div class="alert alert-success alert-sm"><i class="fas fa-check me-1"></i>Parsed! ${methodBadge}`;
             if (measures.length > 1) {
@@ -1058,9 +1059,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modalParseStatus.innerHTML = msg;
           } else {
             // Show specific error if available
-            if (errorMsg && errorMsg.includes('API key')) {
-              modalParseStatus.innerHTML = '<div class="alert alert-danger alert-sm"><i class="fas fa-key me-1"></i><strong>API Key Required</strong><br><small>Add <code>OPENAI_API_KEY</code> to environment.</small></div>';
-            } else if (errorMsg) {
+            if (errorMsg) {
               modalParseStatus.innerHTML = `<div class="alert alert-danger alert-sm"><strong>Error:</strong> ${errorMsg}</div>`;
             } else {
               modalParseStatus.innerHTML = '<div class="alert alert-warning alert-sm">No measures found.</div>';
