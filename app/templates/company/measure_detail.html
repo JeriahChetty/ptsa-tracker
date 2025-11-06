@@ -9,9 +9,10 @@
   </div>
   <div class="text-end">
     <span class="badge fs-6 bg-{{ status_class(assignment.status) }}">{{ assignment.status|default('Not Started') }}</span>
-    {% if assignment.due_at %}
+    {% set deadline = assignment.end_date or (assignment.due_at.date() if assignment.due_at else None) %}
+    {% if deadline %}
     <div class="mt-2">
-      <div id="countdown" class="countdown fs-6 fw-bold" data-due="{{ assignment.due_at.isoformat() }}">
+      <div id="countdown" class="countdown fs-6 fw-bold" data-due="{{ deadline.isoformat() }}T23:59:59">
         Calculating...
       </div>
     </div>
@@ -44,9 +45,10 @@
           </div>
           <div class="col-md-6">
             <p class="mb-1"><strong>Due Date:</strong></p>
+            {% set deadline = assignment.end_date or (assignment.due_at.date() if assignment.due_at else None) %}
             <p class="{{ 'text-danger fw-bold' if assignment.is_overdue else 'text-muted' }}">
-              {% if assignment.due_at %}
-                {{ assignment.due_at.strftime('%Y-%m-%d') }}
+              {% if deadline %}
+                {{ deadline.strftime('%Y-%m-%d') }}
               {% else %}
                 Not set
               {% endif %}

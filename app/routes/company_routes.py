@@ -574,7 +574,7 @@ def view_measure(measure_id):
     ).first_or_404()
     
     # Get steps from the assignment, ordered by their position (safely handling None values)
-    steps = sorted(assignment.steps, key=lambda s: getattr(s, 'order_index', 0) or 0)
+    steps = sorted(assignment.steps, key=lambda s: getattr(s, 'step', 0) or 0)
     
     return render_template('company/measure_detail.html', 
                           measure=measure,

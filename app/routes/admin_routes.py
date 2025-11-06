@@ -1179,7 +1179,7 @@ def delete_company(company_id):
 @login_required
 def measure_profile(measure_id):
     measure = Measure.query.get_or_404(measure_id)
-    return render_template("admin/measure_profile.html", measure=measure)
+    return render_template("admin/measure_profile.html", measure=measure, now=datetime.utcnow())
 
 @admin_bp.route("/measures/<int:measure_id>/edit", methods=["GET", "POST"])
 @login_required
