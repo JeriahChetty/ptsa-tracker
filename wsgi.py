@@ -56,25 +56,42 @@ with app.app_context():
         try:
             from app.models import MeasureAssignment
             from datetime import timedelta
+            from sqlalchemy import or_
+            
             assignments_without_dates = MeasureAssignment.query.filter(
-                (MeasureAssignment.start_date == None) | (MeasureAssignment.end_date == None)
+                or_(MeasureAssignment.start_date == None, MeasureAssignment.end_date == None)
             ).all()
             
             if assignments_without_dates:
-                logger.info(f"⚠️  Found {len(assignments_without_dates)} assignments without dates, backfilling...")
+                logger.info(f"⚠️  Found {len(assignments_without_dates)} assignments with missing dates, backfilling...")
+                updated_count = 0
                 for assignment in assignments_without_dates:
+                    updated = False
                     if not assignment.start_date:
                         assignment.start_date = assignment.created_at.date() if assignment.created_at else datetime.utcnow().date()
+                        logger.info(f"  - Assignment {assignment.id}: Set start_date to {assignment.start_date}")
+                        updated = True
                     if not assignment.end_date:
-                        assignment.end_date = assignment.start_date + timedelta(days=30)
+                        base_date = assignment.start_date if assignment.start_date else datetime.utcnow().date()
+                        assignment.end_date = base_date + timedelta(days=30)
+                        logger.info(f"  - Assignment {assignment.id}: Set end_date to {assignment.end_date}")
+                        updated = True
                     if not assignment.due_at and assignment.end_date:
-                        assignment.due_at = datetime.combine(assignment.end_date, datetime.max.time())
+                        try:
+                            assignment.due_at = datetime.combine(assignment.end_date, datetime.max.time())
+                            logger.info(f"  - Assignment {assignment.id}: Set due_at to {assignment.due_at}")
+                            updated = True
+                        except Exception as e:
+                            logger.warning(f"  - Assignment {assignment.id}: Could not set due_at: {e}")
+                    if updated:
+                        updated_count += 1
+                
                 db.session.commit()
-                logger.info(f"✓ Backfilled dates for {len(assignments_without_dates)} assignments")
+                logger.info(f"✓ Successfully backfilled dates for {updated_count} assignments")
             else:
-                logger.info("✓ All assignments have dates set")
+                logger.info("✓ All assignments already have complete dates")
         except Exception as backfill_error:
-            logger.error(f"Error backfilling assignment dates: {backfill_error}")
+            logger.error(f"❌ Error backfilling assignment dates: {backfill_error}", exc_info=True)
             db.session.rollback()
         
         # Create default admin if needed

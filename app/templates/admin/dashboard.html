@@ -107,6 +107,7 @@
               {% else %}
                 {% set days_diff = None %}
               {% endif %}
+              <!-- DEBUG: end_date={{ a.end_date }}, due_at={{ a.due_at }}, deadline={{ deadline }}, days_diff={{ days_diff }} -->
               <tr{% if is_overdue %} class="table-danger"{% endif %}>
                 <td>{{ a.company.name if a.company else '—' }}</td>
                 <td>{{ a.measure.name if a.measure else '—' }}</td>
