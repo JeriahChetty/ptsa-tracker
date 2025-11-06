@@ -31,10 +31,26 @@ with app.app_context():
             flask_upgrade(directory=migrations_dir)
             logger.info("✓ Database migrations applied")
         except Exception as migrate_error:
-            logger.warning(f"Migration warning: {migrate_error}")
+            logger.warning(f"Migration error: {migrate_error}")
             # Fallback to create_all if migrations fail
             db.create_all()
             logger.info("✓ Database tables created/verified (fallback)")
+        
+        # Ensure order column exists (fallback for migration issues)
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('measure_assignments')]
+            if 'order' not in columns:
+                logger.warning("⚠️  'order' column missing from measure_assignments, adding it now...")
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE measure_assignments ADD COLUMN \"order\" INTEGER DEFAULT 0"))
+                    conn.commit()
+                logger.info("✓ Added 'order' column to measure_assignments")
+            else:
+                logger.info("✓ 'order' column exists in measure_assignments")
+        except Exception as col_error:
+            logger.error(f"Error checking/adding order column: {col_error}")
         
         # Create default admin if needed
         from app.models import User
