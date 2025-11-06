@@ -555,16 +555,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 const measuresData = result.data.measures || [];
                 const count = result.data.count || measuresData.length;
                 const method = result.data.method || 'pattern_matching';
+                const errorMsg = result.data.error;
                 
                 if (measuresData.length > 0) {
                     populateMultipleMeasures(measuresData);
-                    const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI-Powered</span>' : '<span class="badge bg-info">Pattern Matching</span>';
+                    const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI-Powered</span>' : 
+                                      method === 'ai_vision' ? '<span class="badge bg-success">AI Vision</span>' :
+                                      '<span class="badge bg-info">Pattern Matching</span>';
                     parseStatus.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Document parsed successfully! ${methodBadge} Found ${count} measure${count !== 1 ? 's' : ''}.</div>`;
                     
                     // Auto-save after population
                     saveFormData();
                 } else {
-                    parseStatus.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No measures found in document.</div>';
+                    // Show specific error if available
+                    if (errorMsg) {
+                        if (errorMsg.includes('API key')) {
+                            parseStatus.innerHTML = '<div class="alert alert-danger"><i class="fas fa-key me-2"></i><strong>OpenAI API Key Required</strong><br><small>Image parsing requires an OpenAI API key. Please add <code>OPENAI_API_KEY</code> to your environment variables.</small></div>';
+                        } else {
+                            parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>Error:</strong> ${errorMsg}</div>`;
+                        }
+                    } else {
+                        parseStatus.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No measures found in document. Try a clearer image or different file format.</div>';
+                    }
                 }
             } else {
                 parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${result.error || 'Failed to parse document'}</div>`;

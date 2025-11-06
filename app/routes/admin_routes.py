@@ -2045,7 +2045,8 @@ def parse_measure_document():
                 'data': {
                     'measures': measures,
                     'count': len(measures),
-                    'method': result.get('method', 'unknown')
+                    'method': result.get('method', 'unknown'),
+                    'error': result.get('error', None)  # Pass error message if any
                 }
             }, 200
             

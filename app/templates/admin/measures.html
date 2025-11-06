@@ -1041,12 +1041,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (response.ok && result.success) {
           const measures = result.data.measures || [];
           const method = result.data.method || 'pattern_matching';
+          const errorMsg = result.data.error;
           
           if (measures.length > 0) {
             // Populate with first measure (modal only supports single measure)
             populateModalFromData(measures[0]);
             
-            const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI</span>' : '<span class="badge bg-info">Pattern</span>';
+            const methodBadge = method === 'ai' ? '<span class="badge bg-success">AI</span>' : 
+                              method === 'ai_vision' ? '<span class="badge bg-success">Vision</span>' :
+                              '<span class="badge bg-info">Pattern</span>';
             let msg = `<div class="alert alert-success alert-sm"><i class="fas fa-check me-1"></i>Parsed! ${methodBadge}`;
             if (measures.length > 1) {
               msg += ` <small>(${measures.length} measures found, showing first)</small>`;
@@ -1054,7 +1057,14 @@ document.addEventListener('DOMContentLoaded', function() {
             msg += '</div>';
             modalParseStatus.innerHTML = msg;
           } else {
-            modalParseStatus.innerHTML = '<div class="alert alert-warning alert-sm">No measures found.</div>';
+            // Show specific error if available
+            if (errorMsg && errorMsg.includes('API key')) {
+              modalParseStatus.innerHTML = '<div class="alert alert-danger alert-sm"><i class="fas fa-key me-1"></i><strong>API Key Required</strong><br><small>Add <code>OPENAI_API_KEY</code> to environment.</small></div>';
+            } else if (errorMsg) {
+              modalParseStatus.innerHTML = `<div class="alert alert-danger alert-sm"><strong>Error:</strong> ${errorMsg}</div>`;
+            } else {
+              modalParseStatus.innerHTML = '<div class="alert alert-warning alert-sm">No measures found.</div>';
+            }
           }
         } else {
           modalParseStatus.innerHTML = `<div class="alert alert-danger alert-sm">Error: ${result.error || 'Failed'}</div>`;
