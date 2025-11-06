@@ -93,7 +93,7 @@
               </td>
               <td>
                 {% if item.company_name %}
-                <a href="{{ url_for('admin.company_detail', company_id=item.user.company_id) }}">{{ item.company_name }}</a>
+                <a href="{{ url_for('admin.company_profile', company_id=item.user.company_id) }}">{{ item.company_name }}</a>
                 {% else %}
                 <span class="text-muted">—</span>
                 {% endif %}
