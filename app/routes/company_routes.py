@@ -172,6 +172,16 @@ def toggle_step(step_id: int):
             _recalc_assignment_status(a)
 
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_update
+        log_update('step', step.id, step.title, {
+            'assignment_id': a.id,
+            'company': a.company.name if a.company else None,
+            'measure': a.measure.name if a.measure else None,
+            'completed': step.is_completed
+        })
+        
         flash(f"Step '{step.title}' updated.", "success")
     except Exception as e:
         db.session.rollback()
@@ -362,6 +372,16 @@ def request_assistance(assignment_id: int):
         ))
 
     db.session.commit()
+    
+    # Log activity
+    from app.utils.activity_logger import log_create
+    log_create('assistance_request', req.id, f"Assistance: {a.measure.name if a.measure else 'Measure'}", {
+        'assignment_id': a.id,
+        'company': a.company.name if a.company else None,
+        'measure': a.measure.name if a.measure else None,
+        'prev_status': prev
+    })
+    
     flash("Marked as 'Needs Assistance' and notified admin.", "success")
     return redirect(url_for("company.dashboard"))
 

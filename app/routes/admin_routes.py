@@ -371,6 +371,15 @@ def companies():
                 db.session.add(a)
 
             db.session.commit()
+            
+            # Log activity
+            from app.utils.activity_logger import log_create
+            log_create('company', c.id, c.name, {
+                'user_email': u.email,
+                'region': region,
+                'measures_assigned': len(measure_ids)
+            })
+            
             msg = f"Company '{c.name}' created and login {u.email} registered."
             if measure_ids:
                 msg += f" {len(measure_ids)} measure(s) assigned."
@@ -460,6 +469,15 @@ def create_measure():
                     db.session.add(MeasureStep(measure_id=m.id, title=line, step=idx))
 
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_create
+        log_create('measure', m.id, m.name, {
+            'departments': departments,
+            'responsible': responsible,
+            'steps_count': len(step_titles) if step_titles else 0
+        })
+        
         flash(f"Measure '{m.name}' created.", "success")
         return redirect(url_for("admin.measures"))
     except Exception as e:
@@ -512,6 +530,15 @@ def assign_measure():
         )
         db.session.add(assignment)
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_create
+        log_create('assignment', assignment.id, f"{measure.name} → {company.name}", {
+            'measure_id': measure_id,
+            'measure_name': measure.name,
+            'company_id': company_id,
+            'company_name': company.name
+        })
         
         flash(f"Measure '{measure.name}' assigned to '{company.name}'.", "success")
         return redirect(url_for("admin.measures"))
@@ -1107,6 +1134,11 @@ def company_profile(company_id):
         company.phone = request.form.get("phone", "").strip() or None
         
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_update
+        log_update('company', company.id, company.name, {'action': 'profile_update'})
+        
         flash("Company profile updated successfully.", "success")
         return redirect(url_for("admin.company_profile", company_id=company.id))
     
@@ -1131,8 +1163,15 @@ def edit_company(company_id):
 def delete_company(company_id):
     try:
         company = Company.query.get_or_404(company_id)
+        company_name = company.name  # Store before deletion
+        
         db.session.delete(company)
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_delete
+        log_delete('company', company_id, company_name)
+        
         flash("Company deleted.", "success")
         return redirect(url_for("admin.companies"))
     except Exception as e:
@@ -1232,6 +1271,7 @@ def delete_measure(measure_id):
     try:
         from flask import jsonify
         measure = Measure.query.get_or_404(measure_id)
+        measure_name = measure.name  # Store name before deletion
 
         # Manually delete related assignments first to ensure cascades work reliably
         # This is more explicit and safer with complex relationships.
@@ -1241,6 +1281,10 @@ def delete_measure(measure_id):
         db.session.delete(measure)
         
         db.session.commit()
+        
+        # Log activity
+        from app.utils.activity_logger import log_delete
+        log_delete('measure', measure_id, measure_name)
         
         return jsonify({"success": True, "message": "Measure deleted successfully"}), 200
     except Exception as e:
