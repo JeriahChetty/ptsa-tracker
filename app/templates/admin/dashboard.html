@@ -99,9 +99,11 @@
               {% set done = a.steps|selectattr('is_completed')|list|length %}
               {% set pct = ((done * 100) // (total if total else 1))|int %}
               {% set pct5 = ((pct // 5) * 5)|int %}
-              {% set is_overdue = a.due_at and a.due_at < now and a.status != 'Completed' %}
-              {% if a.due_at and a.status != 'Completed' %}
-                {% set days_diff = ((a.due_at - now).days) %}
+              {# Use end_date or due_at for deadline #}
+              {% set deadline = a.end_date or (a.due_at.date() if a.due_at else None) %}
+              {% set is_overdue = deadline and deadline < now.date() and a.status != 'Completed' %}
+              {% if deadline and a.status != 'Completed' %}
+                {% set days_diff = (deadline - now.date()).days %}
               {% else %}
                 {% set days_diff = None %}
               {% endif %}
@@ -131,7 +133,7 @@
                   {% if a.start_date %}{{ a.start_date.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
                 <td>
-                  {% if a.due_at %}{{ a.due_at.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
+                  {% if deadline %}{{ deadline.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
                 <td>
                   {% if days_diff is not none %}
