@@ -14,11 +14,11 @@ from io import BytesIO
 
 def parse_measure_document(file_path: str, file_type: str, use_ai: bool = True) -> Dict:
     """
-    Parse a PDF, PowerPoint, or image file and extract measure information
+    Parse a PDF, PowerPoint, Word, or image file and extract measure information
     
     Args:
         file_path: Path to the uploaded file
-        file_type: 'pdf', 'pptx', 'png', 'jpg', 'jpeg', 'webp'
+        file_type: 'pdf', 'pptx', 'docx', 'doc', 'png', 'jpg', 'jpeg', 'webp'
         use_ai: Whether to use AI-powered extraction (requires OPENAI_API_KEY)
     
     Returns:
@@ -54,11 +54,13 @@ def parse_measure_document(file_path: str, file_type: str, use_ai: bool = True) 
                 }
             return {'measures': [], 'method': 'error', 'error': f'OCR failed: {str(e)}'}
     
-    # Handle PDF/PowerPoint
+    # Handle PDF/PowerPoint/Word
     if file_type == 'pdf':
         text, images = parse_pdf(file_path)
     elif file_type in ['pptx', 'ppt']:
         text, images = parse_powerpoint(file_path)
+    elif file_type in ['docx', 'doc']:
+        text, images = parse_word(file_path)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
     
@@ -124,6 +126,40 @@ def parse_powerpoint(file_path: str) -> tuple:
                     images.append({'data': image_bytes, 'size': None})
                 except:
                     pass
+    
+    return text, images
+
+
+def parse_word(file_path: str) -> tuple:
+    """Extract text and images from Word document"""
+    from docx import Document
+    
+    doc = Document(file_path)
+    text = ""
+    images = []
+    
+    # Extract text from paragraphs
+    for paragraph in doc.paragraphs:
+        text += paragraph.text + "\n"
+    
+    # Extract text from tables
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text += cell.text + "\t"
+            text += "\n"
+    
+    # Extract images (if any)
+    try:
+        for rel in doc.part.rels.values():
+            if "image" in rel.target_ref:
+                try:
+                    image_data = rel.target_part.blob
+                    images.append({'data': image_data, 'size': None})
+                except:
+                    pass
+    except:
+        pass
     
     return text, images
 

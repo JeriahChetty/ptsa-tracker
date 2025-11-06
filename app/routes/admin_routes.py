@@ -2020,8 +2020,8 @@ def parse_measure_document():
         filename = secure_filename(file.filename)
         file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
         
-        if file_ext not in ['pdf', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp']:
-            return {'success': False, 'error': 'Unsupported file type. Please upload PDF, PowerPoint, or image files.'}, 400
+        if file_ext not in ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']:
+            return {'success': False, 'error': 'Unsupported file type. Please upload PDF, PowerPoint, Word, or image files.'}, 400
         
         # Save to temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}') as tmp_file:
@@ -2059,6 +2059,69 @@ def parse_measure_document():
                 
     except Exception as e:
         current_app.logger.error(f"Error parsing document: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+
+@admin_bp.route("/parse-pasted-text", methods=["POST"])
+@login_required
+def parse_pasted_text():
+    """Parse pasted text to extract measure data"""
+    from app.utils.document_parser import extract_multiple_measures
+    
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return {'success': False, 'error': 'No text provided'}, 400
+        
+        pasted_text = data['text']
+        if not pasted_text.strip():
+            return {'success': False, 'error': 'Empty text'}, 400
+        
+        # Try AI extraction first if API key is available
+        if os.getenv('OPENAI_API_KEY'):
+            try:
+                from app.utils.document_parser import extract_with_ai
+                measures = extract_with_ai(pasted_text, [])
+                if measures:
+                    # Convert date objects to strings for JSON
+                    for measure in measures:
+                        if measure.get('start_date'):
+                            measure['start_date'] = measure['start_date'].isoformat() if hasattr(measure['start_date'], 'isoformat') else measure['start_date']
+                        if measure.get('end_date'):
+                            measure['end_date'] = measure['end_date'].isoformat() if hasattr(measure['end_date'], 'isoformat') else measure['end_date']
+                    
+                    return {
+                        'success': True,
+                        'data': {
+                            'measures': measures,
+                            'count': len(measures),
+                            'method': 'ai_paste'
+                        }
+                    }, 200
+            except Exception as e:
+                current_app.logger.warning(f"AI extraction failed for pasted text: {e}")
+        
+        # Fallback to pattern matching
+        measures = extract_multiple_measures(pasted_text)
+        
+        # Convert date objects to strings
+        for measure in measures:
+            if measure.get('start_date'):
+                measure['start_date'] = measure['start_date'].isoformat() if hasattr(measure['start_date'], 'isoformat') else measure['start_date']
+            if measure.get('end_date'):
+                measure['end_date'] = measure['end_date'].isoformat() if hasattr(measure['end_date'], 'isoformat') else measure['end_date']
+        
+        return {
+            'success': True,
+            'data': {
+                'measures': measures,
+                'count': len(measures),
+                'method': 'pattern_matching_paste'
+            }
+        }, 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error parsing pasted text: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 

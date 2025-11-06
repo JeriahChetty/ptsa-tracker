@@ -29,9 +29,9 @@
     <h6 class="mb-0"><i class="fas fa-file-upload me-2"></i>Quick Import from Document</h6>
   </div>
   <div class="card-body">
-    <p class="text-muted small mb-3">Upload a PDF, PowerPoint, or image file to automatically populate the measure form below.</p>
+    <p class="text-muted small mb-2">Upload a PDF, Word, PowerPoint, or image file to auto-populate. Or <strong>paste text</strong> (Ctrl+V) anywhere on this form!</p>
     <div class="input-group">
-      <input type="file" class="form-control" id="documentUpload" accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp">
+      <input type="file" class="form-control" id="documentUpload" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp">
       <button class="btn btn-primary" type="button" id="parseDocumentBtn">
         <i class="fas fa-magic me-1"></i>Parse Document
       </button>
@@ -685,6 +685,70 @@ document.addEventListener('DOMContentLoaded', function() {
         
         reindex();
     }
+    
+    // ===== PASTE DETECTION FEATURE =====
+    // Detect when user pastes text anywhere on the form
+    document.addEventListener('paste', async function(e) {
+        // Skip if user is pasting into a regular input/textarea (let them type normally)
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        
+        // Get pasted text
+        const pastedText = e.clipboardData.getData('text');
+        
+        // Only proceed if there's substantial text (more than just a few words)
+        if (!pastedText || pastedText.trim().length < 50) {
+            return;
+        }
+        
+        // Show confirmation
+        if (!confirm(`Detected pasted text! Would you like to auto-populate the measure form from this text?\n\nPreview:\n${pastedText.substring(0, 100)}...`)) {
+            return;
+        }
+        
+        e.preventDefault();
+        
+        // Show loading in parse status
+        parseStatus.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Parsing pasted text...</div>';
+        
+        try {
+            const response = await fetch('{{ url_for("admin.parse_pasted_text") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: pastedText })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                const measuresData = result.data.measures || [];
+                const count = result.data.count || measuresData.length;
+                const method = result.data.method || 'pattern_matching';
+                
+                if (measuresData.length > 0) {
+                    populateMultipleMeasures(measuresData);
+                    const methodBadge = method === 'ai_paste' ? '<span class="badge bg-success">AI-Powered</span>' : 
+                                      '<span class="badge bg-info">Pattern Matching</span>';
+                    parseStatus.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Pasted text parsed successfully! ${methodBadge} Found ${count} measure${count !== 1 ? 's' : ''}.</div>`;
+                    
+                    // Auto-save after population
+                    saveFormData();
+                    
+                    // Scroll to form
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    parseStatus.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No measures found in pasted text. Try uploading a file instead.</div>';
+                }
+            } else {
+                parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${result.error || 'Failed to parse pasted text'}</div>`;
+            }
+        } catch (error) {
+            parseStatus.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${error.message}</div>`;
+        }
+    });
 });
 </script>
 {% endblock %}
