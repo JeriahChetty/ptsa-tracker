@@ -206,6 +206,7 @@ class MeasureAssignment(TimestampMixin, db.Model):
 
     status = db.Column(db.String(32), nullable=False, default="In Progress")
     urgency = db.Column(db.Integer, default=1)  # 1=Low, 2=Medium, 3=High
+    order = db.Column(db.Integer, default=0)  # For ordering assignments within a company
     
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)

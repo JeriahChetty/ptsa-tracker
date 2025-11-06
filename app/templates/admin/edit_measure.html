@@ -143,35 +143,21 @@
     </div>
   </div>
 
-  <!-- Timeline & Priority -->
+  <!-- Timeline -->
   <div class="form-section">
     <h5 class="section-title">
-      <i class="fas fa-calendar me-2"></i>Timeline & Priority
+      <i class="fas fa-calendar me-2"></i>Timeline
     </h5>
     
     <div class="row g-3">
-      <div class="col-md-4">
+      <div class="col-md-6">
         <label for="start_date" class="form-label">Start Date</label>
         <input type="date" class="form-control" id="start_date" name="start_date" value="{{ measure.start_date.strftime('%Y-%m-%d') if measure.start_date else '' }}">
       </div>
       
-      <div class="col-md-4">
+      <div class="col-md-6">
         <label for="end_date" class="form-label">End Date</label>
         <input type="date" class="form-control" id="end_date" name="end_date" value="{{ measure.end_date.strftime('%Y-%m-%d') if measure.end_date else '' }}">
-      </div>
-      
-      <div class="col-md-4">
-        <label for="default_duration_days" class="form-label">Default Duration (days)</label>
-        <input type="number" class="form-control" id="default_duration_days" name="default_duration_days" min="1" value="{{ measure.default_duration_days or '' }}">
-      </div>
-      
-      <div class="col-md-6">
-        <label for="default_urgency" class="form-label">Default Priority Level</label>
-        <select class="form-select" id="default_urgency" name="default_urgency">
-          <option value="1" {% if measure.default_urgency == 1 %}selected{% endif %}>Low Priority (1)</option>
-          <option value="2" {% if measure.default_urgency == 2 %}selected{% endif %}>Normal Priority (2)</option>
-          <option value="3" {% if measure.default_urgency == 3 %}selected{% endif %}>High Priority (3)</option>
-        </select>
       </div>
     </div>
   </div>

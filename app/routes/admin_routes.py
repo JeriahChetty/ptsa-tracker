@@ -1135,7 +1135,7 @@ def company_profile(company_id):
     # Check if we're in edit mode
     editing = request.args.get('edit', '0') == '1'
     
-    assignments = MeasureAssignment.query.filter_by(company_id=company.id).all()
+    assignments = MeasureAssignment.query.filter_by(company_id=company.id).order_by(MeasureAssignment.order.asc()).all()
     # Get benchmarking data for this company
     from app.models import CompanyBenchmark
     benchmarks = CompanyBenchmark.query.filter_by(company_id=company.id).order_by(CompanyBenchmark.data_year).all()
@@ -1199,15 +1199,6 @@ def edit_measure(measure_id):
             if end_date_str:
                 measure.end_date = datetime.fromisoformat(end_date_str).date()
             
-            # Update numeric fields if they exist in the model
-            if hasattr(measure, 'default_duration_days'):
-                duration_str = request.form.get("default_duration_days", "").strip()
-                measure.default_duration_days = int(duration_str) if duration_str else None
-            
-            if hasattr(measure, 'default_urgency'):
-                urgency_str = request.form.get("default_urgency", "").strip()
-                measure.default_urgency = int(urgency_str) if urgency_str else None
-            
             # Handle steps: get arrays from form
             step_ids = request.form.getlist("step_ids[]")
             step_titles = request.form.getlist("step_titles[]")
@@ -1226,14 +1217,14 @@ def edit_measure(measure_id):
                     step = MeasureStep.query.get(int(step_id))
                     if step and step.measure_id == measure.id:
                         step.title = title
-                        step.step = idx
+                        step.step = idx + 1  # Start from 1 instead of 0
                         submitted_step_ids.add(step.id)
                 else:
                     # Create new step
                     new_step = MeasureStep(
                         measure_id=measure.id,
                         title=title,
-                        step=idx
+                        step=idx + 1  # Start from 1 instead of 0
                     )
                     db.session.add(new_step)
                     db.session.flush()
@@ -1415,6 +1406,35 @@ def manage_step_order(measure_id):
     measure = Measure.query.get_or_404(measure_id)
     steps = Step.query.filter_by(measure_id=measure_id).order_by(Step.order).all()
     return render_template('admin/step_order.html', measure=measure, steps=steps)
+
+@admin_bp.route('/api/companies/<int:company_id>/update-assignment-order', methods=['POST'])
+@login_required
+def update_assignment_order(company_id):
+    """API endpoint to update assignment order for a company"""
+    if not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    
+    try:
+        data = request.get_json()
+        if not data or 'assignments' not in data:
+            return jsonify({"error": "Invalid data"}), 400
+        
+        # Update assignment orders
+        for item in data['assignments']:
+            assignment = MeasureAssignment.query.filter_by(
+                id=item['id'],
+                company_id=company_id
+            ).first()
+            if assignment:
+                assignment.order = item['order']
+        
+        db.session.commit()
+        return jsonify({"success": True, "message": "Assignment order updated"})
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating assignment order: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @admin_bp.route('/api/measures/update-order', methods=['POST'])
 @login_required
