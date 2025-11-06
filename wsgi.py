@@ -23,9 +23,12 @@ app = create_app('production')
 with app.app_context():
     try:
         # Run Flask-Migrate migrations
-        from flask_migrate import upgrade
+        from flask_migrate import upgrade as flask_upgrade
+        import os
+        migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
         try:
-            upgrade()
+            logger.info(f"Running migrations from: {migrations_dir}")
+            flask_upgrade(directory=migrations_dir)
             logger.info("✓ Database migrations applied")
         except Exception as migrate_error:
             logger.warning(f"Migration warning: {migrate_error}")
