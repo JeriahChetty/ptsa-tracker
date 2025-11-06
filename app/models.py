@@ -250,12 +250,17 @@ class MeasureAssignment(TimestampMixin, db.Model):
     @property
     def is_overdue(self):
         from datetime import datetime
-        return self.due_at and self.status != "Completed" and self.due_at < datetime.utcnow()
+        if self.status == "Completed":
+            return False
+        # Use end_date as primary deadline, fallback to due_at
+        if self.end_date:
+            return self.end_date < datetime.utcnow().date()
+        elif self.due_at:
+            return self.due_at < datetime.utcnow()
+        return False
 
     def __repr__(self) -> str:
         return f"<Assignment c={self.company_id} m={self.measure_id} status={self.status}>"
-
-
 # ---------- AssignmentStep (actual steps for an assignment) ----------
 class AssignmentStep(TimestampMixin, db.Model):
     __tablename__ = "assignment_steps"

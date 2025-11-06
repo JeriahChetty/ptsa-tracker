@@ -117,7 +117,8 @@
               <div class="d-flex justify-content-between align-items-start">
                 <div class="me-auto">
                   <div class="fw-bold text-danger">{{ assignment.measure.name }}</div>
-                  <small class="text-muted">Due: {{ assignment.due_at.strftime('%Y-%m-%d') if assignment.due_at else 'No date' }}</small>
+                  {% set deadline = assignment.end_date or (assignment.due_at.date() if assignment.due_at else None) %}
+                  <small class="text-muted">Due: {{ deadline.strftime('%Y-%m-%d') if deadline else 'No date' }}</small>
                 </div>
                 <span class="badge bg-danger">Overdue</span>
               </div>
@@ -219,10 +220,22 @@
               <div class="small text-muted mt-1">{{ done }}/{{ total }} steps ({{ pct }}%)</div>
             </td>
             <td>
-              {% if assignment.due_at %}
-                {{ assignment.due_at.strftime('%Y-%m-%d') }}
-                <br>
-                <span data-countdown data-due-at="{{ assignment.due_at.isoformat() }}"></span>
+              {% set deadline = assignment.end_date or (assignment.due_at.date() if assignment.due_at else None) %}
+              {% if deadline %}
+                {{ deadline.strftime('%Y-%m-%d') }}
+                {% if assignment.status != 'Completed' %}
+                  <br>
+                  {% set days_left = (deadline - now().date()).days %}
+                  {% if days_left < 0 %}
+                    <span class="badge bg-danger">Overdue</span>
+                  {% elif days_left == 0 %}
+                    <span class="badge bg-warning text-dark">Due today</span>
+                  {% elif days_left <= 7 %}
+                    <span class="badge bg-warning text-dark">{{ days_left }} days left</span>
+                  {% else %}
+                    <span class="badge bg-success">{{ days_left }} days left</span>
+                  {% endif %}
+                {% endif %}
               {% else %}
                 <span class="text-muted">Not set</span>
               {% endif %}
