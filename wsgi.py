@@ -22,9 +22,16 @@ app = create_app('production')
 # Initialize database on startup
 with app.app_context():
     try:
-        # Create all tables if they don't exist
-        db.create_all()
-        logger.info("✓ Database tables created/verified")
+        # Run Flask-Migrate migrations
+        from flask_migrate import upgrade
+        try:
+            upgrade()
+            logger.info("✓ Database migrations applied")
+        except Exception as migrate_error:
+            logger.warning(f"Migration warning: {migrate_error}")
+            # Fallback to create_all if migrations fail
+            db.create_all()
+            logger.info("✓ Database tables created/verified (fallback)")
         
         # Create default admin if needed
         from app.models import User
