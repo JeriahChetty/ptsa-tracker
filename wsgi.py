@@ -94,6 +94,45 @@ with app.app_context():
             logger.error(f"❌ Error backfilling assignment dates: {backfill_error}", exc_info=True)
             db.session.rollback()
         
+        # Backfill missing steps for existing assignments
+        try:
+            from app.models import MeasureAssignment, MeasureStep, AssignmentStep
+            
+            all_assignments = MeasureAssignment.query.all()
+            assignments_without_steps = [a for a in all_assignments if len(a.steps) == 0]
+            
+            if assignments_without_steps:
+                logger.info(f"⚠️  Found {len(assignments_without_steps)} assignments without steps, backfilling...")
+                updated_count = 0
+                for assignment in assignments_without_steps:
+                    # Get default steps from the measure
+                    default_steps = MeasureStep.query.filter_by(
+                        measure_id=assignment.measure_id
+                    ).order_by(MeasureStep.step.asc()).all()
+                    
+                    if default_steps:
+                        logger.info(f"  - Assignment {assignment.id}: Copying {len(default_steps)} steps from measure {assignment.measure_id}")
+                        for idx, measure_step in enumerate(default_steps):
+                            assignment_step = AssignmentStep(
+                                assignment_id=assignment.id,
+                                title=measure_step.title,
+                                step=idx,
+                                order_index=idx,
+                                is_completed=False
+                            )
+                            db.session.add(assignment_step)
+                        updated_count += 1
+                    else:
+                        logger.info(f"  - Assignment {assignment.id}: No default steps found on measure {assignment.measure_id}")
+                
+                db.session.commit()
+                logger.info(f"✓ Successfully backfilled steps for {updated_count} assignments")
+            else:
+                logger.info("✓ All assignments already have steps")
+        except Exception as backfill_steps_error:
+            logger.error(f"❌ Error backfilling assignment steps: {backfill_steps_error}", exc_info=True)
+            db.session.rollback()
+        
         # Create default admin if needed
         from app.models import User
         from werkzeug.security import generate_password_hash

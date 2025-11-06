@@ -1088,8 +1088,7 @@ def company_measures_wizard(company_id: int):
                     AssignmentStep(
                         assignment_id=a.id,
                         title=s.title,
-                        step=idx,           # Set step field 
-                        order_index=idx,    # Also set order_index for compatibility
+                        step=idx,
                         is_completed=False,
                     )
                 )
