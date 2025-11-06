@@ -21,6 +21,14 @@ def _is_safe_next(next_url: str) -> bool:
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    # Redirect authenticated users to their dashboard
+    if current_user.is_authenticated:
+        if current_user.role == 'admin':
+            return redirect(url_for('admin.dashboard'))
+        elif current_user.role == 'company':
+            return redirect(url_for('company.dashboard'))
+        return redirect(url_for('main.index'))
+    
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password_input = request.form.get("password", "").strip()

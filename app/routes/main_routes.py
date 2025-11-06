@@ -5,14 +5,9 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    """Home page - redirect based on user role."""
-    if current_user.is_authenticated:
-        if current_user.role == 'admin':
-            return redirect(url_for('admin.dashboard'))
-        elif current_user.role == 'company':
-            return redirect(url_for('company.dashboard'))
-    
-    # Not authenticated - show login page
+    """Home page - always redirect to login for security."""
+    # Always redirect to login page
+    # The login page will redirect authenticated users to their dashboards
     return redirect(url_for('auth.login'))
 
 @main_bp.route('/health')
