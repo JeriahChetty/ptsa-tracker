@@ -87,7 +87,9 @@
               <th scope="col">Measure</th>
               <th scope="col">Status</th>
               <th scope="col" class="w-25">Progress</th>
-              <th scope="col">Due</th>
+              <th scope="col">Start Date</th>
+              <th scope="col">Due Date</th>
+              <th scope="col">Days Remaining</th>
               <th scope="col">Created</th>
             </tr>
           </thead>
@@ -98,6 +100,11 @@
               {% set pct = ((done * 100) // (total if total else 1))|int %}
               {% set pct5 = ((pct // 5) * 5)|int %}
               {% set is_overdue = a.due_at and a.due_at < now and a.status != 'Completed' %}
+              {% if a.due_at and a.status != 'Completed' %}
+                {% set days_diff = ((a.due_at - now).days) %}
+              {% else %}
+                {% set days_diff = None %}
+              {% endif %}
               <tr{% if is_overdue %} class="table-danger"{% endif %}>
                 <td>{{ a.company.name if a.company else '—' }}</td>
                 <td>{{ a.measure.name if a.measure else '—' }}</td>
@@ -121,7 +128,25 @@
                   <div class="small text-muted mt-1">{{ done }}/{{ total }} steps ({{ pct }}%)</div>
                 </td>
                 <td>
+                  {% if a.start_date %}{{ a.start_date.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
                   {% if a.due_at %}{{ a.due_at.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if days_diff is not none %}
+                    {% if days_diff < 0 %}
+                      <span class="badge bg-danger">{{ days_diff|abs }} days overdue</span>
+                    {% elif days_diff == 0 %}
+                      <span class="badge bg-warning text-dark">Due today</span>
+                    {% elif days_diff <= 7 %}
+                      <span class="badge bg-warning text-dark">{{ days_diff }} days left</span>
+                    {% else %}
+                      <span class="badge bg-success">{{ days_diff }} days left</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
                 </td>
                 <td>
                   {% if a.created_at %}{{ a.created_at.strftime('%Y-%m-%d') }}{% else %}<span class="text-muted">—</span>{% endif %}
