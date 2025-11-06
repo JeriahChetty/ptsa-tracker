@@ -480,14 +480,15 @@ def mark_all_notifications_read():
 @company_bp.route("/dashboard", endpoint="dashboard")
 @login_required
 def dashboard():
+    from datetime import datetime
     try:
         assignments = MeasureAssignment.query.filter_by(company_id=current_user.company_id).all()
-        return render_template("company/dashboard.html", assignments=assignments)
+        return render_template("company/dashboard.html", assignments=assignments, now=datetime.utcnow())
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Dashboard error: {str(e)}")
         flash("An error occurred while loading the dashboard. Please try again.", "danger")
-        return render_template("company/dashboard.html", assignments=[])
+        return render_template("company/dashboard.html", assignments=[], now=datetime.utcnow())
 
 
 @company_bp.route('/measures')

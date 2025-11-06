@@ -225,7 +225,7 @@
                 {{ deadline.strftime('%Y-%m-%d') }}
                 {% if assignment.status != 'Completed' %}
                   <br>
-                  {% set days_left = (deadline - now().date()).days %}
+                  {% set days_left = (deadline - now.date()).days %}
                   {% if days_left < 0 %}
                     <span class="badge bg-danger">Overdue</span>
                   {% elif days_left == 0 %}
