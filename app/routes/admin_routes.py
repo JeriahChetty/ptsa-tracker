@@ -1024,8 +1024,11 @@ def company_measures_wizard(company_id: int):
 
             # Find or create measure by name
             m = Measure.query.filter_by(name=name).first()
+            measure_is_new = False  # Track if we created this measure
+            
             if not m:
                 current_app.logger.info(f"Creating new measure: {name}")
+                measure_is_new = True
                 # Create measure with the fields that exist in the model
                 m = Measure(
                     name=name,
@@ -1049,9 +1052,22 @@ def company_measures_wizard(company_id: int):
             # Create assignment for this company
             current_app.logger.info(f"Creating assignment for measure: {name} (ID: {m.id}) to company: {company.name}")
             
-            # Set dates: use measure dates if available, otherwise use defaults
-            assignment_start = m.start_date if m.start_date else datetime.utcnow().date()
-            assignment_end = m.end_date if m.end_date else (datetime.utcnow() + timedelta(days=30)).date()
+            # For NEW measures from form data, use provided dates and company-specific details
+            # For EXISTING measures, use defaults and leave company-specific fields empty
+            if measure_is_new:  # New measure just created from form
+                # Use the form data (already parsed above)
+                assignment_start = start_date if start_date else datetime.utcnow().date()
+                assignment_end = end_date if end_date else (datetime.utcnow() + timedelta(days=30)).date()
+                assignment_departments = departments
+                assignment_responsible = responsible
+                assignment_participants = participants
+            else:  # Existing measure being assigned - needs company-specific details
+                # Use default dates, leave company-specific fields empty for admin to fill
+                assignment_start = datetime.utcnow().date()
+                assignment_end = (datetime.utcnow() + timedelta(days=30)).date()
+                assignment_departments = None
+                assignment_responsible = None
+                assignment_participants = None
             
             a = MeasureAssignment(
                 company_id=company.id,
@@ -1059,10 +1075,10 @@ def company_measures_wizard(company_id: int):
                 status="Not Started",
                 created_at=datetime.utcnow(),
                 urgency=urgency,
-                target=m.target,
-                departments=m.departments,
-                responsible=m.responsible,
-                participants=m.participants,
+                target=m.target,  # Keep target (it's measure-specific, not company-specific)
+                departments=assignment_departments,
+                responsible=assignment_responsible,
+                participants=assignment_participants,
                 start_date=assignment_start,
                 end_date=assignment_end,
             )
