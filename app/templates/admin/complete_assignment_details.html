@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Complete Assignment Details · PTSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>Complete Assignment Details</h2>
+                    <p class="text-muted mb-0">
+                        You just assigned <strong>{{ assignments|length }} measure(s)</strong> to <strong>{{ company.name }}</strong>.
+                        Please provide company-specific details for each assignment.
+                    </p>
+                </div>
+                <a href="{{ url_for('admin.measures') }}" class="btn btn-outline-secondary">
+                    Skip for Now &rarr;
+                </a>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.save_assignment_details') }}">
+                <!-- Hidden field for company_id -->
+                <input type="hidden" name="company_id" value="{{ company.id }}">
+                
+                <!-- Bulk Edit Section -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-magic me-2"></i>Quick Apply: Same Details to All Measures</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Fill in these fields and click "Apply to All" to use the same details for all {{ assignments|length }} measures.
+                            You can still customize individual measures afterward.
+                        </p>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="bulk_responsible" class="form-label">Responsible Person/Role</label>
+                                <input type="text" class="form-control" id="bulk_responsible" name="bulk_responsible" 
+                                       placeholder="e.g., John Smith or Production Manager">
+                                <small class="text-muted">Who is accountable for these measures?</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="bulk_departments" class="form-label">Departments</label>
+                                <input type="text" class="form-control" id="bulk_departments" name="bulk_departments" 
+                                       placeholder="e.g., Production, Quality">
+                                <small class="text-muted">Which departments are involved?</small>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="bulk_participants" class="form-label">Participants</label>
+                                <input type="text" class="form-control" id="bulk_participants" name="bulk_participants" 
+                                       placeholder="e.g., John, Mary, Production Team">
+                                <small class="text-muted">Who will work on these measures?</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="bulk_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="bulk_start_date" name="bulk_start_date" 
+                                       value="{{ today }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="bulk_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="bulk_end_date" name="bulk_end_date" 
+                                       value="{{ default_end_date }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary btn-lg" id="applyToAllBtn">
+                                <i class="fas fa-copy me-2"></i>Apply These Details to All {{ assignments|length }} Measures
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual Assignments -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Individual Measure Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="assignmentsAccordion">
+                            {% for assignment in assignments %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                    <button class="accordion-button {% if loop.index > 1 %}collapsed{% endif %}" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" 
+                                            aria-expanded="{% if loop.index == 1 %}true{% else %}false{% endif %}" 
+                                            aria-controls="collapse{{ loop.index }}">
+                                        <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+                                        <strong>{{ assignment.measure.name }}</strong>
+                                        <span class="ms-auto me-3 text-muted small" id="status{{ assignment.id }}">
+                                            {% if assignment.responsible or assignment.participants or assignment.departments %}
+                                                <i class="fas fa-check-circle text-success"></i> Configured
+                                            {% else %}
+                                                <i class="fas fa-exclamation-circle text-warning"></i> Needs Details
+                                            {% endif %}
+                                        </span>
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.index == 1 %}show{% endif %}" 
+                                     aria-labelledby="heading{{ loop.index }}" data-bs-parent="#assignmentsAccordion">
+                                    <div class="accordion-body">
+                                        <!-- Hidden assignment ID -->
+                                        <input type="hidden" name="assignment_ids[]" value="{{ assignment.id }}">
+                                        
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Responsible Person/Role</label>
+                                                <input type="text" class="form-control assignment-responsible" 
+                                                       name="responsible_{{ assignment.id }}" 
+                                                       value="{{ assignment.responsible or '' }}"
+                                                       placeholder="e.g., John Smith">
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <label class="form-label">Departments</label>
+                                                <input type="text" class="form-control assignment-departments" 
+                                                       name="departments_{{ assignment.id }}" 
+                                                       value="{{ assignment.departments or '' }}"
+                                                       placeholder="e.g., Production">
+                                            </div>
+                                            
+                                            <div class="col-md-12">
+                                                <label class="form-label">Participants</label>
+                                                <input type="text" class="form-control assignment-participants" 
+                                                       name="participants_{{ assignment.id }}" 
+                                                       value="{{ assignment.participants or '' }}"
+                                                       placeholder="e.g., John, Mary, Team">
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <label class="form-label">Start Date</label>
+                                                <input type="date" class="form-control assignment-start-date" 
+                                                       name="start_date_{{ assignment.id }}" 
+                                                       value="{{ assignment.start_date or today }}">
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <label class="form-label">End Date</label>
+                                                <input type="date" class="form-control assignment-end-date" 
+                                                       name="end_date_{{ assignment.id }}" 
+                                                       value="{{ assignment.end_date or default_end_date }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="alert alert-info mt-3 mb-0">
+                                            <small>
+                                                <strong>Measure Template:</strong> {{ assignment.measure.name }}<br>
+                                                <strong>Target:</strong> {{ assignment.measure.target or 'Not specified' }}<br>
+                                                <strong>Steps:</strong> {{ assignment.measure.steps|length }} steps defined
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('admin.measures') }}" class="btn btn-outline-secondary btn-lg">
+                        Skip for Now
+                    </a>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-save me-2"></i>Save All Assignment Details
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Apply bulk details to all assignments
+document.getElementById('applyToAllBtn').addEventListener('click', function() {
+    const bulkResponsible = document.getElementById('bulk_responsible').value;
+    const bulkDepartments = document.getElementById('bulk_departments').value;
+    const bulkParticipants = document.getElementById('bulk_participants').value;
+    const bulkStartDate = document.getElementById('bulk_start_date').value;
+    const bulkEndDate = document.getElementById('bulk_end_date').value;
+    
+    // Apply to all individual assignment fields
+    document.querySelectorAll('.assignment-responsible').forEach(input => {
+        input.value = bulkResponsible;
+    });
+    document.querySelectorAll('.assignment-departments').forEach(input => {
+        input.value = bulkDepartments;
+    });
+    document.querySelectorAll('.assignment-participants').forEach(input => {
+        input.value = bulkParticipants;
+    });
+    document.querySelectorAll('.assignment-start-date').forEach(input => {
+        input.value = bulkStartDate;
+    });
+    document.querySelectorAll('.assignment-end-date').forEach(input => {
+        input.value = bulkEndDate;
+    });
+    
+    // Show success message
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check me-2"></i>Applied to All Measures!';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-success');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+    }, 2000);
+    
+    // Update status indicators
+    document.querySelectorAll('[id^="status"]').forEach(status => {
+        status.innerHTML = '<i class="fas fa-check-circle text-success"></i> Configured';
+    });
+});
+
+// Update status indicators when fields are filled
+document.querySelectorAll('.assignment-responsible, .assignment-participants, .assignment-departments').forEach(input => {
+    input.addEventListener('input', function() {
+        const assignmentId = this.name.split('_').pop();
+        const statusEl = document.getElementById('status' + assignmentId);
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-check-circle text-success"></i> Configured';
+        }
+    });
+});
+</script>
+
+{% endblock %}

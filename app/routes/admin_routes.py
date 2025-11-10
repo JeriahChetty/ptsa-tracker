@@ -977,6 +977,7 @@ def company_measures_wizard(company_id: int):
         
         created_count = 0
         assigned_count = 0
+        created_assignment_ids = []  # Track IDs for redirect to details page
 
         # Process each measure in the form
         for index, data in measures_data.items():
@@ -1109,21 +1110,139 @@ def company_measures_wizard(company_id: int):
                     )
                 )
             assigned_count += 1
+            created_assignment_ids.append(a.id)  # Track this assignment
             current_app.logger.info(f"Assignment created with ID: {a.id}")
 
         # Always commit at the end, not inside the loop
         db.session.commit()
         current_app.logger.info(f"Wizard complete: Created {created_count} measures, assigned {assigned_count}")
 
+        # Redirect to complete assignment details page to fill in company-specific info
+        from flask import session
+        session['pending_assignment_ids'] = created_assignment_ids
+        session['pending_company_id'] = company.id
+        
         flash(
-            f"Created {created_count} new measure(s) and assigned {assigned_count} measure(s) to {company.name}.",
+            f"Created {created_count} new measure(s) and assigned {assigned_count} measure(s) to {company.name}. Please complete the company-specific details below.",
             "success",
         )
-        return redirect(url_for("admin.measures"))
+        return redirect(url_for("admin.complete_assignment_details"))
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error in company measures wizard: {str(e)}")
         flash(f"An error occurred: {str(e)}", "danger")
+        return redirect(url_for("admin.measures"))
+
+
+# ---------------------------------------------------------------------------
+# Complete Assignment Details (after wizard)
+# ---------------------------------------------------------------------------
+@admin_bp.route("/complete-assignment-details", methods=["GET"])
+@login_required
+def complete_assignment_details():
+    """Show form to complete company-specific details for newly assigned measures."""
+    from flask import session
+    from datetime import timedelta
+    
+    # Get pending assignment IDs from session
+    assignment_ids = session.get('pending_assignment_ids', [])
+    company_id = session.get('pending_company_id')
+    
+    if not assignment_ids or not company_id:
+        flash("No pending assignments to complete.", "info")
+        return redirect(url_for("admin.measures"))
+    
+    # Get the assignments and company
+    company = Company.query.get_or_404(company_id)
+    assignments = MeasureAssignment.query.filter(
+        MeasureAssignment.id.in_(assignment_ids)
+    ).all()
+    
+    if not assignments:
+        flash("Assignments not found.", "warning")
+        return redirect(url_for("admin.measures"))
+    
+    # Prepare default dates
+    today = datetime.utcnow().date()
+    default_end_date = today + timedelta(days=30)
+    
+    return render_template(
+        "admin/complete_assignment_details.html",
+        company=company,
+        assignments=assignments,
+        today=today.isoformat(),
+        default_end_date=default_end_date.isoformat()
+    )
+
+
+@admin_bp.route("/save-assignment-details", methods=["POST"])
+@login_required
+def save_assignment_details():
+    """Save company-specific details for assignments."""
+    from flask import session
+    
+    try:
+        company_id = request.form.get("company_id", type=int)
+        assignment_ids = request.form.getlist("assignment_ids[]")
+        
+        if not company_id or not assignment_ids:
+            flash("Missing required data.", "danger")
+            return redirect(url_for("admin.measures"))
+        
+        company = Company.query.get_or_404(company_id)
+        updated_count = 0
+        
+        # Update each assignment with its specific details
+        for assignment_id in assignment_ids:
+            assignment = MeasureAssignment.query.get(int(assignment_id))
+            if not assignment:
+                continue
+            
+            # Get the form data for this specific assignment
+            responsible = request.form.get(f"responsible_{assignment_id}", "").strip() or None
+            departments = request.form.get(f"departments_{assignment_id}", "").strip() or None
+            participants = request.form.get(f"participants_{assignment_id}", "").strip() or None
+            start_date_str = request.form.get(f"start_date_{assignment_id}", "").strip()
+            end_date_str = request.form.get(f"end_date_{assignment_id}", "").strip()
+            
+            # Update assignment
+            assignment.responsible = responsible
+            assignment.departments = departments
+            assignment.participants = participants
+            
+            # Parse and update dates
+            if start_date_str:
+                try:
+                    assignment.start_date = datetime.fromisoformat(start_date_str).date()
+                except Exception:
+                    pass
+            
+            if end_date_str:
+                try:
+                    assignment.end_date = datetime.fromisoformat(end_date_str).date()
+                    # Also update due_at
+                    assignment.due_at = datetime.combine(assignment.end_date, datetime.max.time())
+                except Exception:
+                    pass
+            
+            updated_count += 1
+        
+        db.session.commit()
+        
+        # Clear session data
+        session.pop('pending_assignment_ids', None)
+        session.pop('pending_company_id', None)
+        
+        flash(
+            f"Successfully updated {updated_count} assignment(s) for {company.name}.",
+            "success"
+        )
+        return redirect(url_for("admin.measures"))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error saving assignment details: {str(e)}")
+        flash(f"Error saving details: {str(e)}", "danger")
         return redirect(url_for("admin.measures"))
 
 
