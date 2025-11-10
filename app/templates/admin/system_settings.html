@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}System Settings · Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">System Settings</h1>
+    <p class="text-muted mb-0">Configure email notifications and automated reports</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+  </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="POST" id="settingsForm">
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+      <h2 class="h5 mb-0">
+        <i class="fas fa-chart-line text-primary me-2"></i>Progress Report Emails
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="progress_report_enabled" 
+               name="progress_report_enabled" {% if settings.progress_report_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="progress_report_enabled">
+          <strong>Enable Progress Reports</strong>
+          <div class="small text-muted">Send automated progress reports to admins</div>
+        </label>
+      </div>
+
+      <div id="progressReportOptions">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label for="progress_report_frequency" class="form-label">Frequency</label>
+            <select class="form-select" id="progress_report_frequency" name="progress_report_frequency">
+              <option value="daily" {% if settings.progress_report_frequency == 'daily' %}selected{% endif %}>Daily</option>
+              <option value="weekly" {% if settings.progress_report_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+              <option value="monthly" {% if settings.progress_report_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label for="progress_report_day" class="form-label">
+              <span id="dayLabel">Day</span>
+            </label>
+            <select class="form-select" id="progress_report_day" name="progress_report_day"></select>
+            <div class="form-text" id="dayHelp">When to send the report</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="progress_report_hour" class="form-label">Time (Hour, UTC)</label>
+            <select class="form-select" id="progress_report_hour" name="progress_report_hour">
+              {% for hour in range(24) %}
+              <option value="{{ hour }}" {% if settings.progress_report_hour == hour %}selected{% endif %}>
+                {{ "%02d"|format(hour) }}:00 UTC
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Hour to send the report (0-23, UTC timezone)</div>
+          </div>
+
+          <div class="col-12">
+            <label for="progress_report_additional_emails" class="form-label">
+              Additional Recipients
+            </label>
+            <textarea class="form-control" id="progress_report_additional_emails" 
+                      name="progress_report_additional_emails" rows="2" 
+                      placeholder="email1@example.com, email2@example.com">{{ settings.progress_report_additional_emails or '' }}</textarea>
+            <div class="form-text">
+              <i class="fas fa-info-circle me-1"></i>
+              Add non-admin email addresses, separated by commas. Admin users will always receive reports.
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info mb-0">
+          <i class="fas fa-clock me-2"></i>
+          {% if settings.last_progress_report_sent %}
+            Last sent: <strong>{{ settings.last_progress_report_sent.strftime('%B %d, %Y at %H:%M UTC') }}</strong>
+          {% else %}
+            No progress reports have been sent yet.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+      <h2 class="h5 mb-0">
+        <i class="fas fa-hands-helping text-danger me-2"></i>Assistance Request Notifications
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="assistance_email_enabled" 
+               name="assistance_email_enabled" {% if settings.assistance_email_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="assistance_email_enabled">
+          <strong>Enable Assistance Email Notifications</strong>
+          <div class="small text-muted">Send emails when companies request assistance</div>
+        </label>
+      </div>
+
+      <div id="assistanceOptions">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="assistance_email_immediate" 
+                 name="assistance_email_immediate" {% if settings.assistance_email_immediate %}checked{% endif %}>
+          <label class="form-check-label" for="assistance_email_immediate">
+            <strong>Send Immediately</strong>
+            <div class="small text-muted">Email admins as soon as assistance is requested (recommended)</div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center">
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-save me-1"></i>Save Settings
+    </button>
+    <form method="POST" action="{{ url_for('admin.send_progress_report_now') }}" class="d-inline">
+      <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Send progress report now to all admin users?')">
+        <i class="fas fa-paper-plane me-1"></i>Send Progress Report Now
+      </button>
+    </form>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const frequencySelect = document.getElementById('progress_report_frequency');
+  const daySelect = document.getElementById('progress_report_day');
+  const dayLabel = document.getElementById('dayLabel');
+  const dayHelp = document.getElementById('dayHelp');
+  
+  const savedDay = {{ settings.progress_report_day }};
+  
+  function updateDayOptions() {
+    const frequency = frequencySelect.value;
+    daySelect.innerHTML = '';
+    
+    if (frequency === 'weekly') {
+      dayLabel.textContent = 'Day of Week';
+      dayHelp.textContent = 'Which day of the week to send (Monday = 1)';
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      days.forEach((day, index) => {
+        const option = document.createElement('option');
+        option.value = index + 1;
+        option.textContent = day;
+        option.selected = (index + 1) === savedDay;
+        daySelect.appendChild(option);
+      });
+    } else if (frequency === 'monthly') {
+      dayLabel.textContent = 'Day of Month';
+      dayHelp.textContent = 'Which day of the month to send (1-28)';
+      for (let i = 1; i <= 28; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        option.selected = i === savedDay;
+        daySelect.appendChild(option);
+      }
+    } else {
+      daySelect.style.display = 'none';
+      dayLabel.parentElement.style.display = 'none';
+    }
+    
+    if (frequency !== 'daily') {
+      daySelect.style.display = 'block';
+      dayLabel.parentElement.style.display = 'block';
+    }
+  }
+  
+  frequencySelect.addEventListener('change', updateDayOptions);
+  updateDayOptions();
+  
+  const progressEnabled = document.getElementById('progress_report_enabled');
+  const progressOptions = document.getElementById('progressReportOptions');
+  progressEnabled.addEventListener('change', function() {
+    progressOptions.style.display = this.checked ? 'block' : 'none';
+  });
+  
+  const assistanceEnabled = document.getElementById('assistance_email_enabled');
+  const assistanceOptions = document.getElementById('assistanceOptions');
+  assistanceEnabled.addEventListener('change', function() {
+    assistanceOptions.style.display = this.checked ? 'block' : 'none';
+  });
+});
+</script>
+{% endblock %}

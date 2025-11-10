@@ -29,7 +29,8 @@ from app.models import (
     AssignmentStep,
     NotificationConfig,
     AssistanceRequest,
-    Notification,  
+    Notification,
+    SystemSettings,
 )
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -2605,3 +2606,116 @@ def activity_logs():
             'entity_type': entity_type
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# System Settings (Email Notifications & Reports)
+# ---------------------------------------------------------------------------
+@admin_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+def system_settings():
+    """Manage system-wide settings for email notifications and reports"""
+    settings = SystemSettings.get_settings()
+    
+    if request.method == "POST":
+        try:
+            # Update progress report settings
+            settings.progress_report_enabled = request.form.get('progress_report_enabled') == 'on'
+            settings.progress_report_frequency = request.form.get('progress_report_frequency', 'weekly')
+            settings.progress_report_day = int(request.form.get('progress_report_day', 1))
+            settings.progress_report_hour = int(request.form.get('progress_report_hour', 8))
+            settings.progress_report_additional_emails = request.form.get('progress_report_additional_emails', '').strip()
+            
+            # Update assistance settings
+            settings.assistance_email_enabled = request.form.get('assistance_email_enabled') == 'on'
+            settings.assistance_email_immediate = request.form.get('assistance_email_immediate') == 'on'
+            
+            db.session.commit()
+            flash("Settings updated successfully!", "success")
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating settings: {str(e)}", "danger")
+            
+        return redirect(url_for('admin.system_settings'))
+    
+    return render_template("admin/system_settings.html", settings=settings)
+
+
+@admin_bp.route("/send-progress-report", methods=["POST"])
+@login_required
+def send_progress_report_now():
+    """Manually trigger progress report email"""
+    try:
+        from app.utils.email_reports import send_progress_report
+        
+        success = send_progress_report()
+        
+        if success:
+            flash("Progress report sent successfully!", "success")
+        else:
+            flash("Failed to send progress report. Check mail configuration.", "warning")
+            
+    except Exception as e:
+        flash(f"Error sending progress report: {str(e)}", "danger")
+    
+    return redirect(url_for('admin.system_settings'))
+
+
+# Public endpoint for scheduled tasks (e.g., cron job, Render cron)
+@admin_bp.route("/cron/send-progress-report", methods=["GET", "POST"])
+def cron_send_progress_report():
+    """
+    Endpoint for scheduled progress report sending.
+    Can be called by external cron service or Render cron jobs.
+    No authentication required but should use a secret token in production.
+    """
+    # Optional: Check for a secret token to prevent unauthorized access
+    token = request.args.get('token') or request.form.get('token')
+    expected_token = current_app.config.get('CRON_SECRET_TOKEN')
+    
+    if expected_token and token != expected_token:
+        abort(403, "Invalid token")
+    
+    try:
+        from app.utils.email_reports import send_progress_report
+        from app.models import SystemSettings
+        
+        settings = SystemSettings.get_settings()
+        
+        if not settings.progress_report_enabled:
+            return {"status": "skipped", "message": "Progress reports are disabled"}, 200
+        
+        # Check if it's time to send based on frequency
+        now = datetime.utcnow()
+        last_sent = settings.last_progress_report_sent
+        
+        should_send = False
+        
+        if not last_sent:
+            should_send = True
+        elif settings.progress_report_frequency == 'daily':
+            # Send if more than 23 hours since last send
+            should_send = (now - last_sent).total_seconds() > 23 * 3600
+        elif settings.progress_report_frequency == 'weekly':
+            # Send if current day matches and more than 6 days since last send
+            days_since = (now - last_sent).days
+            current_day = now.isoweekday()  # 1=Monday, 7=Sunday
+            should_send = days_since >= 6 and current_day == settings.progress_report_day
+        elif settings.progress_report_frequency == 'monthly':
+            # Send if current day of month matches and more than 28 days since last send
+            days_since = (now - last_sent).days
+            should_send = days_since >= 28 and now.day == settings.progress_report_day
+        
+        if should_send:
+            success = send_progress_report()
+            if success:
+                return {"status": "success", "message": "Progress report sent"}, 200
+            else:
+                return {"status": "error", "message": "Failed to send report"}, 500
+        else:
+            return {"status": "skipped", "message": "Not time to send yet"}, 200
+            
+    except Exception as e:
+        current_app.logger.error(f"Cron progress report error: {str(e)}")
+        return {"status": "error", "message": str(e)}, 500

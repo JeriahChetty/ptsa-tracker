@@ -378,6 +378,13 @@ def request_assistance(assignment_id: int):
 
     db.session.commit()
     
+    # Send email notification to admins
+    try:
+        from app.utils.email_reports import send_assistance_notification
+        send_assistance_notification(req)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send assistance email: {str(e)}")
+    
     # Log activity
     from app.utils.activity_logger import log_create
     log_create('assistance_request', req.id, f"Assistance: {a.measure.name if a.measure else 'Measure'}", {

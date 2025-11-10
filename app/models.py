@@ -486,4 +486,38 @@ class ActivityLog(TimestampMixin, db.Model):
     def __repr__(self) -> str:
         return f"<ActivityLog {self.id} {self.user_id} {self.action} {self.entity_type}>"
 
+# ---------- SystemSettings (singleton) ----------
+class SystemSettings(TimestampMixin, db.Model):
+    """System-wide settings for email notifications and reports"""
+    __tablename__ = "system_settings"
+    
+    id = db.Column(db.Integer, primary_key=True)  # singleton row id=1
+    
+    # Progress report email settings
+    progress_report_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    progress_report_frequency = db.Column(db.String(32), default='weekly', nullable=False)  # 'daily', 'weekly', 'monthly'
+    progress_report_day = db.Column(db.Integer, default=1)  # Day of week (1=Monday) or day of month
+    progress_report_hour = db.Column(db.Integer, default=8)  # Hour to send (0-23, UTC)
+    progress_report_additional_emails = db.Column(db.Text, nullable=True)  # Comma-separated emails
+    
+    # Assistance request email settings
+    assistance_email_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    assistance_email_immediate = db.Column(db.Boolean, default=True, nullable=False)  # Send immediately or batch
+    
+    # Last sent timestamps
+    last_progress_report_sent = db.Column(db.DateTime, nullable=True)
+    
+    def __repr__(self) -> str:
+        return f"<SystemSettings progress={self.progress_report_frequency} assistance={self.assistance_email_enabled}>"
+    
+    @staticmethod
+    def get_settings():
+        """Get or create the singleton settings record"""
+        settings = SystemSettings.query.first()
+        if not settings:
+            settings = SystemSettings(id=1)
+            db.session.add(settings)
+            db.session.commit()
+        return settings
+
 # ---------- Benchmarking ----------
