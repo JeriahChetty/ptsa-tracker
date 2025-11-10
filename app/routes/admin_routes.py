@@ -2658,15 +2658,19 @@ def send_progress_report_now():
     try:
         from app.utils.email_reports import send_progress_report
         
-        success = send_progress_report()
-        
-        if success:
-            flash("Progress report sent successfully!", "success")
-        else:
-            flash("Failed to send progress report. Check mail configuration.", "warning")
+        send_progress_report()
+        flash("✅ Progress report sent successfully!", "success")
             
     except Exception as e:
-        flash(f"Error sending progress report: {str(e)}", "danger")
+        error_msg = str(e)
+        if "MAIL_" in error_msg or "not configured" in error_msg.lower():
+            flash(f"❌ Email Configuration Error: {error_msg}", "danger")
+            flash("💡 Make sure MAIL_USE_TLS=true in Render environment variables!", "warning")
+        elif "TLS" in error_msg or "SSL" in error_msg or "SMTP" in error_msg:
+            flash(f"❌ SMTP Connection Error: {error_msg}", "danger")
+            flash("💡 Check: Is MAIL_USE_TLS=true? Port should be 587 for TLS.", "warning")
+        else:
+            flash(f"❌ Error: {error_msg}", "danger")
     
     return redirect(url_for('admin.system_settings'))
 
@@ -2681,12 +2685,20 @@ def send_reminders_now():
         success = send_due_date_reminders()
         
         if success:
-            flash("Due date reminders sent successfully!", "success")
+            flash("✅ Due date reminders sent successfully!", "success")
         else:
-            flash("No reminders to send or mail not configured.", "info")
+            flash("ℹ️ No reminders to send (no measures due in the configured timeframe).", "info")
             
     except Exception as e:
-        flash(f"Error sending reminders: {str(e)}", "danger")
+        error_msg = str(e)
+        if "MAIL_" in error_msg or "not configured" in error_msg.lower():
+            flash(f"❌ Email Configuration Error: {error_msg}", "danger")
+            flash("💡 Make sure MAIL_USE_TLS=true in Render environment variables!", "warning")
+        elif "TLS" in error_msg or "SSL" in error_msg or "SMTP" in error_msg:
+            flash(f"❌ SMTP Connection Error: {error_msg}", "danger")
+            flash("💡 Check: Is MAIL_USE_TLS=true? Port should be 587 for TLS.", "warning")
+        else:
+            flash(f"❌ Error: {error_msg}", "danger")
     
     return redirect(url_for('admin.system_settings'))
 

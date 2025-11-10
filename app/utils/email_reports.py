@@ -243,13 +243,13 @@ def send_progress_report():
     """Send progress report email to all admins and additional recipients"""
     if not mail:
         current_app.logger.warning("Mail not configured, cannot send progress report")
-        return False
+        raise Exception("Flask-Mail extension is not configured. Check MAIL_* environment variables.")
     
     settings = SystemSettings.get_settings()
     
     if not settings.progress_report_enabled:
         current_app.logger.info("Progress reports are disabled")
-        return False
+        raise Exception("Progress reports are disabled in settings. Enable them to send.")
     
     # Get all recipients
     admin_emails = get_admin_emails()
@@ -258,31 +258,27 @@ def send_progress_report():
     
     if not all_recipients:
         current_app.logger.warning("No recipients for progress report")
-        return False
+        raise Exception("No recipients found. Add admin users or additional email addresses.")
     
     # Generate report content
     html_content = generate_progress_report_html()
     
-    try:
-        msg = MailMessage(
-            subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
-            recipients=all_recipients,
-            html=html_content,
-            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
-        )
-        
-        mail.send(msg)
-        
-        # Update last sent timestamp
-        settings.last_progress_report_sent = datetime.utcnow()
-        db.session.commit()
-        
-        current_app.logger.info(f"Progress report sent to {len(all_recipients)} recipient(s)")
-        return True
-        
-    except Exception as e:
-        current_app.logger.error(f"Failed to send progress report: {str(e)}")
-        return False
+    msg = MailMessage(
+        subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
+        recipients=all_recipients,
+        html=html_content,
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
+    )
+    
+    # This will raise an exception if it fails
+    mail.send(msg)
+    
+    # Update last sent timestamp
+    settings.last_progress_report_sent = datetime.utcnow()
+    db.session.commit()
+    
+    current_app.logger.info(f"Progress report sent to {len(all_recipients)} recipient(s)")
+    return True
 
 
 def send_due_date_reminders():
