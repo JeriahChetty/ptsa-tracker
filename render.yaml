@@ -17,7 +17,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:////app/instance/ptsa.db
+        value: postgresql://ptsa_tracker_db_user:ZIqSmF9o7fM2dh8J34VdPdQN5DZ5AmXa@dpg-d45ghm3e5dus73c4jsg0-a/ptsa_tracker_db
       - key: PYTHONPATH
         value: /app
       # Email Configuration (matching your image)

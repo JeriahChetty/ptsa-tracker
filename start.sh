@@ -3,15 +3,25 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Set Flask app and environment
+export FLASK_APP=wsgi.py
+export FLASK_ENV=production
+
+# Show environment info
+echo "================================"
+echo "Environment Configuration:"
+echo "FLASK_APP: $FLASK_APP"
+echo "FLASK_ENV: $FLASK_ENV"
+echo "DATABASE_URL: ${DATABASE_URL:0:30}..." # Show first 30 chars only for security
+echo "Current directory: $(pwd)"
+echo "Python version: $(python --version)"
+echo "================================"
+
 # Run database migrations
-# We use 'flask db upgrade' which is the standard command for applying migrations.
-# This ensures the database schema is up-to-date before the app starts.
 echo "Running database migrations..."
-flask db upgrade
-echo "Migrations complete."
+python -m flask db upgrade
+echo "✓ Migrations complete."
 
 # Start the Gunicorn server
-# This is the same command that was in render.yaml
-# It will only run if the migrations above succeed.
 echo "Starting Gunicorn server..."
-gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+exec gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
