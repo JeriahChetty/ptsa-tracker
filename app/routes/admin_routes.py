@@ -2656,12 +2656,19 @@ def system_settings():
 def send_progress_report_now():
     """Manually trigger progress report email"""
     try:
+        current_app.logger.info("Starting progress report send...")
         from app.utils.email_reports import send_progress_report
         
+        current_app.logger.info("Calling send_progress_report()...")
         send_progress_report()
+        current_app.logger.info("Progress report sent successfully")
         flash("✅ Progress report sent successfully!", "success")
             
     except Exception as e:
+        current_app.logger.error(f"Progress report failed: {type(e).__name__}: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        
         error_msg = str(e)
         if "MAIL_" in error_msg or "not configured" in error_msg.lower():
             flash(f"❌ Email Configuration Error: {error_msg}", "danger")
