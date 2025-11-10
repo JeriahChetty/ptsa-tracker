@@ -1,7 +1,7 @@
 """add soft delete to measure assignments
 
 Revision ID: a3b4c5d6e7f8
-Revises: 85bf436b1b65
+Revises: f1a2b3c4d5e6
 Create Date: 2025-11-10 06:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'a3b4c5d6e7f8'
-down_revision = '85bf436b1b65'
+down_revision = 'f1a2b3c4d5e6'
 branch_labels = None
 depends_on = None
 
