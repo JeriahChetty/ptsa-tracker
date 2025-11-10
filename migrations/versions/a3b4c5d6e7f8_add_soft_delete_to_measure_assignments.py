@@ -18,10 +18,20 @@ depends_on = None
 
 def upgrade():
     # Add soft-delete columns to measure_assignments table
+    # Make migration idempotent - only add columns if they don't exist
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [c['name'] for c in inspector.get_columns('measure_assignments')]
+    
     with op.batch_alter_table('measure_assignments', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('deleted_at', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('deleted_by', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key('fk_measure_assignments_deleted_by_users', 'users', ['deleted_by'], ['id'])
+        if 'deleted_at' not in columns:
+            batch_op.add_column(sa.Column('deleted_at', sa.DateTime(), nullable=True))
+        if 'deleted_by' not in columns:
+            batch_op.add_column(sa.Column('deleted_by', sa.Integer(), nullable=True))
+        # Only create foreign key if deleted_by column was just added or doesn't have the constraint
+        if 'deleted_by' not in columns:
+            batch_op.create_foreign_key('fk_measure_assignments_deleted_by_users', 'users', ['deleted_by'], ['id'])
 
 
 def downgrade():
