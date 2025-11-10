@@ -22,7 +22,7 @@ app = create_app('production')
 # Initialize database on startup
 with app.app_context():
     try:
-        # Run Flask-Migrate migrations
+        # First, run migrations
         from flask_migrate import upgrade as flask_upgrade
         import os
         migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
@@ -31,10 +31,24 @@ with app.app_context():
             flask_upgrade(directory=migrations_dir)
             logger.info("✓ Database migrations applied")
         except Exception as migrate_error:
-            logger.warning(f"Migration error: {migrate_error}")
-            # Fallback to create_all if migrations fail
-            db.create_all()
-            logger.info("✓ Database tables created/verified (fallback)")
+            logger.error(f"Migration error: {migrate_error}")
+            # Don't continue if migrations fail
+            raise
+            
+        # Verify critical schema changes
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Check if measure_assignments table exists
+        if 'measure_assignments' not in inspector.get_table_names():
+            logger.error("❌ 'measure_assignments' table does not exist")
+            raise Exception("Database schema is incomplete. Please check migrations.")
+            
+        # Check if deleted_at column exists
+        columns = [col['name'] for col in inspector.get_columns('measure_assignments')]
+        if 'deleted_at' not in columns:
+            logger.error("❌ 'deleted_at' column is missing from measure_assignments table")
+            raise Exception("Database schema is out of date. Please check migrations.")
         
         # Ensure order column exists (fallback for migration issues)
         try:
