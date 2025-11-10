@@ -1551,20 +1551,20 @@ def test_company_email():
                 current_app.logger.info(f"Recipients: {[user.email for user in company_users]}")
                 
                 flash(f"Email would be sent to {len(company_users)} user(s) at {company.name}, but email is not configured. Check logs.", "info")
-                
-                # Create a notification record in the database
-                if Notification is not None:
-                    for user in company_users:
-                        db.session.add(Notification(
-                            company_id=company_id,
-                            user_id=user.id,
-                            kind="test_email",
-                            subject=subject,
-                            body=message,
-                            notify_at=datetime.utcnow(),
-                        ))
-                    db.session.commit()
-                    flash(f"Added notification to database for {len(company_users)} user(s).", "info")
+            
+            # Create a notification record in the database (regardless of email config)
+            if Notification is not None:
+                for user in company_users:
+                    db.session.add(Notification(
+                        company_id=company_id,
+                        user_id=user.id,
+                        kind="test_email",
+                        subject=subject,
+                        body=message,
+                        notify_at=datetime.utcnow(),
+                    ))
+                db.session.commit()
+                flash(f"Notification added to database for {len(company_users)} user(s).", "info")
         
         except Exception as e:
             current_app.logger.error(f"Error sending test email: {str(e)}")
