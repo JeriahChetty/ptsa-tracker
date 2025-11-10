@@ -54,11 +54,6 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('admin.admin_notifications') }}">Notifications</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin.system_settings') }}">
-                                    <i class="fas fa-cog me-1"></i>Settings
-                                </a>
-                            </li>
                         {% elif current_user.role == 'company' %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('company.dashboard') }}">Dashboard</a>
@@ -81,7 +76,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 {% if current_user.role == 'admin' %}
-                                <li><a class="dropdown-item" href="{{ url_for('admin.notification_settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.system_settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('admin.users') }}"><i class="fas fa-users me-2"></i>User Management</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('admin.activity_logs') }}"><i class="fas fa-history me-2"></i>Activity Logs</a></li>
                                 {% elif current_user.role == 'company' %}
