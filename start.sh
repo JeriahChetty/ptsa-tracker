@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -12,7 +12,7 @@ echo "================================"
 echo "Environment Configuration:"
 echo "FLASK_APP: $FLASK_APP"
 echo "FLASK_ENV: $FLASK_ENV"
-echo "DATABASE_URL: ${DATABASE_URL:0:30}..." # Show first 30 chars only for security
+echo "DATABASE_URL: (configured)"
 echo "Current directory: $(pwd)"
 echo "Python version: $(python --version)"
 echo "================================"
