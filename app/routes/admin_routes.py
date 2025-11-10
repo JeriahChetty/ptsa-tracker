@@ -2655,31 +2655,49 @@ def system_settings():
 @login_required
 def send_progress_report_now():
     """Manually trigger progress report email"""
+    # Wrap EVERYTHING in try/except to prevent worker crashes
     try:
-        current_app.logger.info("Starting progress report send...")
-        from app.utils.email_reports import send_progress_report
+        current_app.logger.info("=== PROGRESS REPORT START ===")
         
-        current_app.logger.info("Calling send_progress_report()...")
-        send_progress_report()
-        current_app.logger.info("Progress report sent successfully")
-        flash("✅ Progress report sent successfully!", "success")
+        # Test if we can import
+        try:
+            from app.utils.email_reports import send_progress_report
+            current_app.logger.info("Import successful")
+        except Exception as import_error:
+            current_app.logger.error(f"Import failed: {import_error}")
+            flash(f"❌ Import Error: {str(import_error)}", "danger")
+            return redirect(url_for('admin.system_settings'))
+        
+        # Test if we can call the function
+        try:
+            current_app.logger.info("Calling send_progress_report()...")
+            send_progress_report()
+            current_app.logger.info("=== SUCCESS ===")
+            flash("✅ Progress report sent successfully!", "success")
+        except Exception as send_error:
+            current_app.logger.error(f"Send failed: {type(send_error).__name__}: {str(send_error)}")
+            import traceback
+            current_app.logger.error(traceback.format_exc())
             
-    except Exception as e:
-        current_app.logger.error(f"Progress report failed: {type(e).__name__}: {str(e)}")
+            error_msg = str(send_error)
+            if "MAIL_" in error_msg or "not configured" in error_msg.lower():
+                flash(f"❌ Email Configuration Error: {error_msg}", "danger")
+                flash("💡 Make sure MAIL_USE_TLS=true in Render environment variables!", "warning")
+            elif "TLS" in error_msg or "SSL" in error_msg or "SMTP" in error_msg:
+                flash(f"❌ SMTP Connection Error: {error_msg}", "danger")
+                flash("💡 Check: Is MAIL_USE_TLS=true? Port should be 587 for TLS.", "warning")
+            else:
+                flash(f"❌ Error: {error_msg}", "danger")
+        
+        return redirect(url_for('admin.system_settings'))
+        
+    except Exception as outer_error:
+        # This should NEVER happen, but if it does, we need to know
+        current_app.logger.error(f"=== OUTER EXCEPTION ===: {outer_error}")
         import traceback
         current_app.logger.error(traceback.format_exc())
-        
-        error_msg = str(e)
-        if "MAIL_" in error_msg or "not configured" in error_msg.lower():
-            flash(f"❌ Email Configuration Error: {error_msg}", "danger")
-            flash("💡 Make sure MAIL_USE_TLS=true in Render environment variables!", "warning")
-        elif "TLS" in error_msg or "SSL" in error_msg or "SMTP" in error_msg:
-            flash(f"❌ SMTP Connection Error: {error_msg}", "danger")
-            flash("💡 Check: Is MAIL_USE_TLS=true? Port should be 587 for TLS.", "warning")
-        else:
-            flash(f"❌ Error: {error_msg}", "danger")
-    
-    return redirect(url_for('admin.system_settings'))
+        flash("❌ Critical error occurred. Check server logs.", "danger")
+        return redirect(url_for('admin.dashboard'))
 
 
 @admin_bp.route("/send-reminders", methods=["POST"])
