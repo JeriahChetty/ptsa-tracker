@@ -2655,8 +2655,31 @@ def system_settings():
 @login_required
 def send_progress_report_now():
     """Manually trigger progress report email"""
-    # Simplest possible implementation to test if route works at all
-    flash("Route accessed successfully (email sending temporarily disabled for testing)", "info")
+    try:
+        # Import inside try block to catch any import errors
+        from app.utils.email_reports import send_progress_report
+        
+        # Call the function - it will raise an exception if it fails
+        send_progress_report()
+        
+        flash("✅ Progress report sent successfully!", "success")
+        
+    except Exception as e:
+        # Log the full error for debugging
+        current_app.logger.error(f"Progress report error: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        
+        # Show user-friendly error message
+        error_msg = str(e)
+        if "SMTP" in error_msg or "TLS" in error_msg or "SSL" in error_msg:
+            flash(f"❌ Email Server Error: {error_msg}", "danger")
+            flash("💡 Tip: Check MAIL_USE_TLS=true and MAIL_PORT=587 in environment", "warning")
+        elif "not configured" in error_msg.lower() or "MAIL_" in error_msg:
+            flash(f"❌ Configuration Error: {error_msg}", "danger")
+        else:
+            flash(f"❌ Error: {error_msg}", "danger")
+    
     return redirect(url_for('admin.system_settings'))
 
 
