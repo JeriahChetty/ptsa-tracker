@@ -14,6 +14,7 @@ from flask import (
     url_for,
     abort,
     current_app,
+    jsonify,
 )
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
@@ -41,6 +42,10 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 # ---------------------------------------------------------------------------
 @admin_bp.before_request
 def _admins_only():
+    # Allow public access to cron endpoints
+    if request.endpoint and 'cron' in request.endpoint:
+        return None
+    
     if not current_user.is_authenticated:
         return redirect(url_for("auth.login", next=request.path))
     if getattr(current_user, "role", "") != "admin":
@@ -2684,7 +2689,7 @@ def cron_send_progress_report():
         settings = SystemSettings.get_settings()
         
         if not settings.progress_report_enabled:
-            return {"status": "skipped", "message": "Progress reports are disabled"}, 200
+            return jsonify({"status": "skipped", "message": "Progress reports are disabled"}), 200
         
         # Check if it's time to send based on frequency
         now = datetime.utcnow()
@@ -2710,12 +2715,12 @@ def cron_send_progress_report():
         if should_send:
             success = send_progress_report()
             if success:
-                return {"status": "success", "message": "Progress report sent"}, 200
+                return jsonify({"status": "success", "message": "Progress report sent"}), 200
             else:
-                return {"status": "error", "message": "Failed to send report"}, 500
+                return jsonify({"status": "error", "message": "Failed to send report"}), 500
         else:
-            return {"status": "skipped", "message": "Not time to send yet"}, 200
+            return jsonify({"status": "skipped", "message": "Not time to send yet"}), 200
             
     except Exception as e:
         current_app.logger.error(f"Cron progress report error: {str(e)}")
-        return {"status": "error", "message": str(e)}, 500
+        return jsonify({"status": "error", "message": str(e)}), 500
