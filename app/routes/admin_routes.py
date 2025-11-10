@@ -361,7 +361,7 @@ def companies():
                     measure_id=m.id,
                     status="Not Started",  # progress only when steps begin
                     created_at=datetime.utcnow(),
-                    urgency=getattr(m, "default_urgency", None) or None,
+                    urgency=getattr(m, "default_urgency", None) or 1,
                     target=m.target,
                     departments=m.departments,
                     responsible=m.responsible,
@@ -1049,9 +1049,9 @@ def company_measures_wizard(company_id: int):
 
             # Parse numeric fields
             try:
-                urgency = int(data.get('urgency')) if data.get('urgency') else None
+                urgency = int(data.get('urgency')) if data.get('urgency') else 1
             except (ValueError, TypeError):
-                urgency = None
+                urgency = 1
 
             # Parse date fields
             start_date = None
