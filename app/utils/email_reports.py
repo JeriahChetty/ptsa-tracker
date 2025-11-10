@@ -241,44 +241,47 @@ def generate_progress_report_html():
 
 def send_progress_report():
     """Send progress report email to all admins and additional recipients"""
-    if not mail:
-        current_app.logger.warning("Mail not configured, cannot send progress report")
-        raise Exception("Flask-Mail extension is not configured. Check MAIL_* environment variables.")
-    
-    settings = SystemSettings.get_settings()
-    
-    if not settings.progress_report_enabled:
-        current_app.logger.info("Progress reports are disabled")
-        raise Exception("Progress reports are disabled in settings. Enable them to send.")
-    
-    # Get all recipients
-    admin_emails = get_admin_emails()
-    additional_emails = get_additional_report_emails()
-    all_recipients = admin_emails + additional_emails
-    
-    if not all_recipients:
-        current_app.logger.warning("No recipients for progress report")
-        raise Exception("No recipients found. Add admin users or additional email addresses.")
-    
-    # Generate report content
-    html_content = generate_progress_report_html()
-    
-    msg = MailMessage(
-        subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
-        recipients=all_recipients,
-        html=html_content,
-        sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
-    )
-    
-    # This will raise an exception if it fails
-    mail.send(msg)
-    
-    # Update last sent timestamp
-    settings.last_progress_report_sent = datetime.utcnow()
-    db.session.commit()
-    
-    current_app.logger.info(f"Progress report sent to {len(all_recipients)} recipient(s)")
-    return True
+    try:
+        if not mail:
+            raise Exception("Flask-Mail extension is not configured. Check MAIL_* environment variables.")
+        
+        settings = SystemSettings.get_settings()
+        
+        if not settings.progress_report_enabled:
+            raise Exception("Progress reports are disabled in settings. Enable them to send.")
+        
+        # Get all recipients
+        admin_emails = get_admin_emails()
+        additional_emails = get_additional_report_emails()
+        all_recipients = admin_emails + additional_emails
+        
+        if not all_recipients:
+            raise Exception("No recipients found. Add admin users or additional email addresses.")
+        
+        # Generate report content
+        html_content = generate_progress_report_html()
+        
+        msg = MailMessage(
+            subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
+            recipients=all_recipients,
+            html=html_content,
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
+        )
+        
+        # This will raise an exception if it fails
+        mail.send(msg)
+        
+        # Update last sent timestamp
+        settings.last_progress_report_sent = datetime.utcnow()
+        db.session.commit()
+        
+        current_app.logger.info(f"Progress report sent to {len(all_recipients)} recipient(s)")
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Failed to send progress report: {str(e)}")
+        # Re-raise with context
+        raise
 
 
 def send_due_date_reminders():
@@ -294,7 +297,6 @@ def send_due_date_reminders():
         return False
     
     # Calculate the target due date (X days from now)
-    from datetime import datetime, timedelta
     target_date = datetime.utcnow() + timedelta(days=settings.reminder_days_before)
     target_date_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
     target_date_end = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
