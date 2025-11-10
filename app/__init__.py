@@ -35,6 +35,10 @@ def create_app(config_name="production"):
     login_manager.init_app(app)
     migrate.init_app(app, db)
     
+    # Initialize Flask-Mail if configured
+    if mail:
+        mail.init_app(app)
+    
     # Configure login manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'

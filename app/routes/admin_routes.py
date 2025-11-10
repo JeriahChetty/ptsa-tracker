@@ -53,7 +53,11 @@ def _admins_only():
 @login_required
 def dashboard():
     now = datetime.utcnow()
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
     overdue_count = db.session.query(MeasureAssignment).filter(
+        MeasureAssignment.due_at.isnot(None),
         MeasureAssignment.due_at < now,
         MeasureAssignment.status != "Completed"
     ).count()
@@ -66,20 +70,22 @@ def dashboard():
         "completed": db.session.query(MeasureAssignment).filter_by(status="Completed").count(),
         "overdue": overdue_count,
     }
-    recent = (
+    
+    # Paginate recent assignments
+    recent_pagination = (
         MeasureAssignment.query.options(
             joinedload(MeasureAssignment.company),
             joinedload(MeasureAssignment.measure),
             joinedload(MeasureAssignment.steps),
         )
         .order_by(MeasureAssignment.created_at.desc())
-        .limit(12)
-        .all()
+        .paginate(page=page, per_page=per_page, error_out=False)
     )
+    
     overdue = [
-        a for a in recent if a.due_at and a.status != "Completed" and a.due_at < now
+        a for a in recent_pagination.items if a.due_at and a.status != "Completed" and a.due_at < now
     ]
-    return render_template("admin/dashboard.html", stats=stats, recent=recent, overdue=overdue, now=now)
+    return render_template("admin/dashboard.html", stats=stats, recent=recent_pagination, overdue=overdue, now=now)
 
 
 # ---------------------------------------------------------------------------

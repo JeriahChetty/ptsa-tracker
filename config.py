@@ -28,7 +28,7 @@ SQLALCHEMY_ENGINE_OPTIONS = {
 # Email configuration from environment
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'mail.ptsa.co.za')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
+MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'  # Default to True for port 587
 MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME', 'info@ptsa.co.za')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', 'wqMvrJm4VZp')

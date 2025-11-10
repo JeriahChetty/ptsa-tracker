@@ -2,9 +2,14 @@
 {% block title %}Assistance Requests · Admin{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">Assistance Requests</h1>
-  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Assistance Requests</h1>
+    <p class="text-muted mb-0">Manage company assistance requests and send reminders</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+  </a>
 </div>
 
 {# ---------- EMAIL REMINDER SECTION ---------- #}
@@ -95,14 +100,16 @@
 
 {# ---------- OPEN REQUESTS ---------- #}
 <div class="card shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h2 class="h5 mb-0"><i class="fas fa-hands-helping text-danger me-2"></i>Open Requests</h2>
+    <span class="badge bg-danger">{{ open_reqs|length }}</span>
+  </div>
   <div class="card-body">
-    <h2 class="h5 mb-3">Open Requests</h2>
-
     {% if not open_reqs %}
-      <div class="alert alert-info mb-0">No open assistance requests.</div>
+      <div class="alert alert-success mb-0"><i class="fas fa-check-circle me-2"></i>No open assistance requests. Great job!</div>
     {% else %}
       <div class="table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-hover table-sm align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Company</th>
@@ -182,14 +189,16 @@
 
 {# ---------- RECENT DECISIONS (last 20) ---------- #}
 <div class="card shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h2 class="h5 mb-0"><i class="fas fa-history text-info me-2"></i>Recent Decisions</h2>
+    <span class="badge bg-secondary">Last 20</span>
+  </div>
   <div class="card-body">
-    <h2 class="h5 mb-3">Recent Decisions</h2>
-
     {% if not recent %}
       <div class="text-muted">No recent items.</div>
     {% else %}
       <div class="table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-hover table-sm align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Company</th>

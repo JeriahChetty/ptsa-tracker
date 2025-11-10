@@ -417,6 +417,7 @@ def notifications():
     overdue_assignments = MeasureAssignment.query.filter_by(
         company_id=current_user.company_id
     ).filter(
+        MeasureAssignment.due_at.isnot(None),
         MeasureAssignment.due_at < now,
         MeasureAssignment.status != "Completed"
     ).all()
