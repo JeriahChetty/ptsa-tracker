@@ -396,13 +396,13 @@ def notifications():
     from datetime import datetime, timedelta
     from app.models import Notification
     
-    if not current_user.company:
+    if not current_user.company_id:
         flash("No company associated with your account.", "danger")
         return redirect(url_for("company.dashboard"))
     
     # Get notifications for this company
     notifications = Notification.query.filter_by(
-        company_id=current_user.company.id
+        company_id=current_user.company_id
     ).filter(
         Notification.read_at.is_(None)  # Only unread
     ).order_by(Notification.notify_at.desc()).all()
@@ -410,7 +410,7 @@ def notifications():
     # Get overdue assignments for notifications
     now = datetime.utcnow()
     overdue_assignments = MeasureAssignment.query.filter_by(
-        company_id=current_user.company.id
+        company_id=current_user.company_id
     ).filter(
         MeasureAssignment.due_at < now,
         MeasureAssignment.status != "Completed"
