@@ -406,11 +406,24 @@ def notifications():
         return redirect(url_for("company.dashboard"))
     
     # Get notifications for this company
-    notifications = Notification.query.filter_by(
+    db_notifications = Notification.query.filter_by(
         company_id=current_user.company_id
     ).filter(
         Notification.read_at.is_(None)  # Only unread
     ).order_by(Notification.notify_at.desc()).all()
+    
+    # Convert database notifications to dictionaries
+    notifications = []
+    for n in db_notifications:
+        notifications.append({
+            'id': n.id,
+            'subject': n.subject,
+            'body': n.body,
+            'notify_at': n.notify_at,
+            'created_at': n.created_at,
+            'assignment_id': n.assignment_id,
+            'assignment': n.assignment if hasattr(n, 'assignment') else None
+        })
     
     # Get overdue assignments for notifications
     now = datetime.utcnow()
@@ -428,13 +441,15 @@ def notifications():
         overdue_notifications.append({
             'id': None,  # No database notification
             'assignment': assignment,
-            'title': f"{assignment.measure.name} - Overdue",
+            'subject': f"{assignment.measure.name} - Overdue",
+            'body': f"This measure is overdue and requires your attention.",
             'due_at': assignment.due_at,
-            'created_at': assignment.due_at
+            'created_at': assignment.due_at,
+            'notify_at': assignment.due_at
         })
     
     # Combine all notifications
-    all_notifications = list(notifications) + overdue_notifications
+    all_notifications = notifications + overdue_notifications
     
     return render_template(
         "company/notifications.html",
