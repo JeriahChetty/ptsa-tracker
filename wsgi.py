@@ -4,6 +4,7 @@ WSGI entry point for PTSA Tracker
 """
 import os
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,27 +45,53 @@ with app.app_context():
             logger.error("❌ 'measure_assignments' table does not exist")
             raise Exception("Database schema is incomplete. Please check migrations.")
             
-        # Check if deleted_at column exists
+        # Get all columns in measure_assignments table
         columns = [col['name'] for col in inspector.get_columns('measure_assignments')]
-        if 'deleted_at' not in columns:
-            logger.error("❌ 'deleted_at' column is missing from measure_assignments table")
-            raise Exception("Database schema is out of date. Please check migrations.")
+        logger.info(f"Current columns in measure_assignments: {columns}")
         
-        # Ensure order column exists (fallback for migration issues)
-        try:
-            from sqlalchemy import text, inspect
-            inspector = inspect(db.engine)
-            columns = [col['name'] for col in inspector.get_columns('measure_assignments')]
-            if 'order' not in columns:
-                logger.warning("⚠️  'order' column missing from measure_assignments, adding it now...")
+        # Check and add missing columns
+        missing_columns = []
+        
+        if 'deleted_at' not in columns:
+            missing_columns.append('deleted_at')
+            logger.warning("⚠️  'deleted_at' column is missing from measure_assignments table, adding it now...")
+            try:
                 with db.engine.connect() as conn:
-                    conn.execute(text("ALTER TABLE measure_assignments ADD COLUMN \"order\" INTEGER DEFAULT 0"))
+                    conn.execute(text("ALTER TABLE measure_assignments ADD COLUMN deleted_at TIMESTAMP"))
+                    conn.commit()
+                logger.info("✓ Added 'deleted_at' column to measure_assignments")
+            except Exception as col_error:
+                logger.error(f"Error adding deleted_at column: {col_error}")
+                raise
+        
+        if 'deleted_by' not in columns:
+            missing_columns.append('deleted_by')
+            logger.warning("⚠️  'deleted_by' column is missing from measure_assignments table, adding it now...")
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE measure_assignments ADD COLUMN deleted_by INTEGER"))
+                    conn.commit()
+                logger.info("✓ Added 'deleted_by' column to measure_assignments")
+            except Exception as col_error:
+                logger.error(f"Error adding deleted_by column: {col_error}")
+                raise
+        
+        if 'order' not in columns:
+            missing_columns.append('order')
+            logger.warning("⚠️  'order' column is missing from measure_assignments table, adding it now...")
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE measure_assignments ADD COLUMN "order" INTEGER DEFAULT 0'))
                     conn.commit()
                 logger.info("✓ Added 'order' column to measure_assignments")
-            else:
-                logger.info("✓ 'order' column exists in measure_assignments")
-        except Exception as col_error:
-            logger.error(f"Error checking/adding order column: {col_error}")
+            except Exception as col_error:
+                logger.error(f"Error adding order column: {col_error}")
+                raise
+        
+        if missing_columns:
+            logger.info(f"✓ Successfully added missing columns: {', '.join(missing_columns)}")
+        else:
+            logger.info("✓ All required columns exist in measure_assignments")
         
         # Backfill missing dates for existing assignments
         try:
