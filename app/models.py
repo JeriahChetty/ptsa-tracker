@@ -504,8 +504,13 @@ class SystemSettings(TimestampMixin, db.Model):
     assistance_email_enabled = db.Column(db.Boolean, default=True, nullable=False)
     assistance_email_immediate = db.Column(db.Boolean, default=True, nullable=False)  # Send immediately or batch
     
+    # Due date reminder email settings
+    reminder_email_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    reminder_days_before = db.Column(db.Integer, default=7, nullable=False)  # Days before due date to send reminder
+    
     # Last sent timestamps
     last_progress_report_sent = db.Column(db.DateTime, nullable=True)
+    last_reminder_check = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self) -> str:
         return f"<SystemSettings progress={self.progress_report_frequency} assistance={self.assistance_email_enabled}>"

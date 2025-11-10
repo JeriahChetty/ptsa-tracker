@@ -2635,6 +2635,10 @@ def system_settings():
             settings.assistance_email_enabled = request.form.get('assistance_email_enabled') == 'on'
             settings.assistance_email_immediate = request.form.get('assistance_email_immediate') == 'on'
             
+            # Update reminder settings
+            settings.reminder_email_enabled = request.form.get('reminder_email_enabled') == 'on'
+            settings.reminder_days_before = int(request.form.get('reminder_days_before', 7))
+            
             db.session.commit()
             flash("Settings updated successfully!", "success")
             
@@ -2663,6 +2667,26 @@ def send_progress_report_now():
             
     except Exception as e:
         flash(f"Error sending progress report: {str(e)}", "danger")
+    
+    return redirect(url_for('admin.system_settings'))
+
+
+@admin_bp.route("/send-reminders", methods=["POST"])
+@login_required
+def send_reminders_now():
+    """Manually trigger due date reminder emails"""
+    try:
+        from app.utils.email_reports import send_due_date_reminders
+        
+        success = send_due_date_reminders()
+        
+        if success:
+            flash("Due date reminders sent successfully!", "success")
+        else:
+            flash("No reminders to send or mail not configured.", "info")
+            
+    except Exception as e:
+        flash(f"Error sending reminders: {str(e)}", "danger")
     
     return redirect(url_for('admin.system_settings'))
 
@@ -2723,4 +2747,40 @@ def cron_send_progress_report():
             
     except Exception as e:
         current_app.logger.error(f"Cron progress report error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@admin_bp.route("/cron/send-reminders", methods=["GET", "POST"])
+def cron_send_reminders():
+    """
+    Endpoint for scheduled due date reminder sending.
+    Can be called by external cron service or Render cron jobs.
+    Should be run daily to check for upcoming due dates.
+    """
+    # Optional: Check for a secret token to prevent unauthorized access
+    token = request.args.get('token') or request.form.get('token')
+    expected_token = current_app.config.get('CRON_SECRET_TOKEN')
+    
+    if expected_token and token != expected_token:
+        abort(403, "Invalid token")
+    
+    try:
+        from app.utils.email_reports import send_due_date_reminders
+        from app.models import SystemSettings
+        
+        settings = SystemSettings.get_settings()
+        
+        if not settings.reminder_email_enabled:
+            return jsonify({"status": "skipped", "message": "Reminder emails are disabled"}), 200
+        
+        # Send reminders (function checks if there are any due)
+        success = send_due_date_reminders()
+        
+        if success:
+            return jsonify({"status": "success", "message": "Reminders sent"}), 200
+        else:
+            return jsonify({"status": "skipped", "message": "No reminders to send"}), 200
+            
+    except Exception as e:
+        current_app.logger.error(f"Cron reminders error: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500

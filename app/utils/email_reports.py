@@ -285,6 +285,161 @@ def send_progress_report():
         return False
 
 
+def send_due_date_reminders():
+    """Send reminder emails to companies about upcoming due dates"""
+    if not mail:
+        current_app.logger.warning("Mail not configured, cannot send reminders")
+        return False
+    
+    settings = SystemSettings.get_settings()
+    
+    if not settings.reminder_email_enabled:
+        current_app.logger.info("Reminder emails are disabled")
+        return False
+    
+    # Calculate the target due date (X days from now)
+    from datetime import datetime, timedelta
+    target_date = datetime.utcnow() + timedelta(days=settings.reminder_days_before)
+    target_date_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    target_date_end = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    # Find assignments due on the target date that are not completed
+    assignments = MeasureAssignment.query.filter(
+        MeasureAssignment.due_at.isnot(None),
+        MeasureAssignment.due_at >= target_date_start,
+        MeasureAssignment.due_at <= target_date_end,
+        MeasureAssignment.status != 'Completed'
+    ).all()
+    
+    if not assignments:
+        current_app.logger.info(f"No assignments due in {settings.reminder_days_before} days")
+        return True
+    
+    # Group assignments by company
+    company_assignments = {}
+    for assignment in assignments:
+        company_id = assignment.company_id
+        if company_id not in company_assignments:
+            company_assignments[company_id] = []
+        company_assignments[company_id].append(assignment)
+    
+    emails_sent = 0
+    
+    # Send one email per company with all their upcoming assignments
+    for company_id, assignments_list in company_assignments.items():
+        company = Company.query.get(company_id)
+        if not company:
+            continue
+        
+        # Get company users
+        company_users = User.query.filter_by(company_id=company_id, is_active=True).all()
+        company_emails = [user.email for user in company_users]
+        
+        if not company_emails:
+            current_app.logger.warning(f"No active users for company {company.name}")
+            continue
+        
+        # Generate email content
+        html_content = render_template_string("""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+                  color: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .alert { background: #fef3c7; border-left: 4px solid #f59e0b; 
+                padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .measure-list { background: white; border-radius: 8px; overflow: hidden; 
+                       box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .measure-item { padding: 15px; border-bottom: 1px solid #e5e7eb; }
+        .measure-item:last-child { border-bottom: none; }
+        .measure-name { font-weight: 600; color: #1f2937; margin-bottom: 5px; }
+        .measure-due { color: #f59e0b; font-size: 14px; }
+        .measure-status { display: inline-block; padding: 4px 12px; border-radius: 12px; 
+                         font-size: 12px; font-weight: 600; }
+        .status-not-started { background: #fee2e2; color: #991b1b; }
+        .status-in-progress { background: #dbeafe; color: #1e40af; }
+        .status-needs-assistance { background: #fef3c7; color: #92400e; }
+        .button { display: inline-block; background: #f59e0b; color: white; 
+                 padding: 12px 24px; text-decoration: none; border-radius: 6px; 
+                 font-weight: 600; margin: 20px 0; }
+        .footer { margin-top: 30px; padding: 20px; background: #f8f9fa; 
+                 border-radius: 8px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ Upcoming Due Dates Reminder</h1>
+            <p>{{ company_name }}</p>
+        </div>
+        
+        <div class="alert">
+            <strong>⚠️ Attention Required</strong><br>
+            You have <strong>{{ assignment_count }}</strong> measure(s) due in <strong>{{ days_count }} days</strong> 
+            ({{ due_date }}).
+        </div>
+        
+        <div class="measure-list">
+            {% for assignment in assignments %}
+            <div class="measure-item">
+                <div class="measure-name">{{ assignment.measure.name }}</div>
+                <div class="measure-due">
+                    Due: {{ assignment.due_at.strftime('%B %d, %Y') }}
+                    <span class="measure-status status-{{ assignment.status.lower().replace(' ', '-') }}">
+                        {{ assignment.status }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <a href="{{ dashboard_url }}" class="button">View Dashboard & Take Action</a>
+        
+        <div class="footer">
+            <p><strong>This is an automated reminder from PTSA Tracker.</strong></p>
+            <p>Please log in to update the status of your measures and ensure they are completed on time.</p>
+            <p>If you've already completed these measures, please update their status in the system.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """,
+            company_name=company.name,
+            assignment_count=len(assignments_list),
+            days_count=settings.reminder_days_before,
+            due_date=target_date.strftime('%B %d, %Y'),
+            assignments=assignments_list,
+            dashboard_url=f"{current_app.config.get('APP_URL', 'https://ptsa-tracker-du81.onrender.com')}/company/dashboard"
+        )
+        
+        try:
+            msg = MailMessage(
+                subject=f"⏰ Reminder: {len(assignments_list)} Measure(s) Due in {settings.reminder_days_before} Days",
+                recipients=company_emails,
+                html=html_content,
+                sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
+            )
+            
+            mail.send(msg)
+            emails_sent += 1
+            current_app.logger.info(f"Reminder sent to {company.name} ({len(company_emails)} recipients)")
+            
+        except Exception as e:
+            current_app.logger.error(f"Failed to send reminder to {company.name}: {str(e)}")
+    
+    # Update last check timestamp
+    settings.last_reminder_check = datetime.utcnow()
+    db.session.commit()
+    
+    current_app.logger.info(f"Sent {emails_sent} reminder email(s) for {len(assignments)} assignment(s)")
+    return emails_sent > 0
+
+
 def send_assistance_notification(assistance_request):
     """Send email notification when a company requests assistance"""
     if not mail:
