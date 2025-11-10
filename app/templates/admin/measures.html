@@ -282,37 +282,8 @@
               </tr>
               {% endif %}
               
-              {% if measure.departments %}
-              <tr>
-                <td class="field-label">Departments:</td>
-                <td class="field-value">{{ measure.departments }}</td>
-              </tr>
-              {% endif %}
-              
-              {% if measure.responsible %}
-              <tr>
-                <td class="field-label">Responsible:</td>
-                <td class="field-value">{{ measure.responsible }}</td>
-              </tr>
-              {% endif %}
-              
-              {% if measure.participants %}
-              <tr>
-                <td class="field-label">Participants:</td>
-                <td class="field-value">{{ measure.participants }}</td>
-              </tr>
-              {% endif %}
-              
-              {% if measure.start_date or measure.end_date %}
-              <tr>
-                <td class="field-label">Timeline:</td>
-                <td class="field-value">
-                  {% if measure.start_date %}Start: {{ measure.start_date.strftime('%Y-%m-%d') }}{% endif %}
-                  {% if measure.start_date and measure.end_date %} | {% endif %}
-                  {% if measure.end_date %}End: {{ measure.end_date.strftime('%Y-%m-%d') }}{% endif %}
-                </td>
-              </tr>
-              {% endif %}
+              {# Company-specific fields removed from measure list - these should only appear on assignment views #}
+              {# Departments, Responsible, Participants, and Timeline are assignment-specific, not measure template fields #}
             </tbody>
           </table>
         </div>
@@ -490,45 +461,97 @@
 
 <!-- Assign Measure Modal -->
 <div class="modal fade" id="assignMeasureModal" tabindex="-1" aria-labelledby="assignMeasureModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="POST" action="{{ url_for('admin.assign_measure') }}">
         <div class="modal-header">
-          <h5 class="modal-title" id="assignMeasureModalLabel">Assign Measure</h5>
+          <h5 class="modal-title" id="assignMeasureModalLabel">Assign Measure to Company</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" name="measure_id" id="assign_measure_id">
-          <div class="mb-3">
-            <label class="form-label">Measure</label>
-            <input type="text" class="form-control" id="assign_measure_name" readonly>
+          
+          <!-- Measure & Company Selection -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Measure</label>
+              <input type="text" class="form-control" id="assign_measure_name" readonly>
+            </div>
+            <div class="col-md-6">
+              <label for="company_id" class="form-label">Company <span class="text-danger">*</span></label>
+              <select class="form-select" id="company_id" name="company_id" required>
+                <option value="">Select Company...</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="company_id" class="form-label">Company</label>
-            <select class="form-select" id="company_id" name="company_id" required>
-              <option value="">Select Company...</option>
-              {% for company in companies %}
-              <option value="{{ company.id }}">{{ company.name }}</option>
-              {% endfor %}
-            </select>
+          
+          <hr class="my-3">
+          
+          <!-- Company-Specific Details -->
+          <h6 class="mb-3"><i class="fas fa-info-circle text-primary me-2"></i>Company-Specific Details</h6>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="assign_responsible" class="form-label">Responsible Person/Role</label>
+              <input type="text" class="form-control" id="assign_responsible" name="responsible" 
+                     placeholder="e.g., John Smith or Production Manager">
+              <small class="text-muted">Who is accountable for this measure?</small>
+            </div>
+            <div class="col-md-6">
+              <label for="assign_departments" class="form-label">Departments</label>
+              <input type="text" class="form-control" id="assign_departments" name="departments" 
+                     placeholder="e.g., Production, Quality">
+              <small class="text-muted">Which departments are involved?</small>
+            </div>
           </div>
+          
           <div class="mb-3">
-            <label for="assign_urgency" class="form-label">Urgency/Priority</label>
-            <select class="form-select" id="assign_urgency" name="urgency">
-              <option value="1">Low (1)</option>
-              <option value="2" selected>Normal (2)</option>
-              <option value="3">High (3)</option>
-            </select>
-            <small class="text-muted">Displayed as diamonds in the company view</small>
+            <label for="assign_participants" class="form-label">Participants</label>
+            <input type="text" class="form-control" id="assign_participants" name="participants" 
+                   placeholder="e.g., John, Mary, Production Team">
+            <small class="text-muted">Who will work on this measure?</small>
           </div>
-          <div class="mb-3">
-            <label for="end_date" class="form-label">Due Date</label>
-            <input type="date" class="form-control" id="assign_end_date" name="end_date">
+          
+          <hr class="my-3">
+          
+          <!-- Timeline & Priority -->
+          <h6 class="mb-3"><i class="fas fa-calendar-alt text-primary me-2"></i>Timeline & Priority</h6>
+          
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="assign_start_date" class="form-label">Start Date</label>
+              <input type="date" class="form-control" id="assign_start_date" name="start_date">
+            </div>
+            <div class="col-md-4">
+              <label for="assign_end_date" class="form-label">Due Date</label>
+              <input type="date" class="form-control" id="assign_end_date" name="end_date">
+            </div>
+            <div class="col-md-4">
+              <label for="assign_urgency" class="form-label">Urgency/Priority</label>
+              <select class="form-select" id="assign_urgency" name="urgency">
+                <option value="1">Low (1)</option>
+                <option value="2" selected>Normal (2)</option>
+                <option value="3">High (3)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="alert alert-info mb-0">
+            <small>
+              <i class="fas fa-lightbulb me-1"></i>
+              <strong>Tip:</strong> These details are specific to this company's assignment. 
+              The measure template remains unchanged and can be assigned to other companies with different details.
+            </small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Assign</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-check me-1"></i>Assign Measure
+          </button>
         </div>
       </form>
     </div>

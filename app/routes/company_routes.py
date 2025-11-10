@@ -127,8 +127,13 @@ def company_profile():
         
         # Check if edit mode is requested
         editing = request.args.get('edit', '0') == '1'
-            
-        assignments = MeasureAssignment.query.filter_by(company_id=current_user.company_id).all()
+        
+        # Exclude soft-deleted assignments
+        assignments = MeasureAssignment.query.filter_by(
+            company_id=current_user.company_id
+        ).filter(
+            MeasureAssignment.deleted_at.is_(None)
+        ).all()
         return render_template("company/company_profile.html", company=company, assignments=assignments, editing=editing)
     except Exception as e:
         db.session.rollback()
@@ -482,7 +487,12 @@ def mark_all_notifications_read():
 def dashboard():
     from datetime import datetime
     try:
-        assignments = MeasureAssignment.query.filter_by(company_id=current_user.company_id).all()
+        # Exclude soft-deleted assignments
+        assignments = MeasureAssignment.query.filter_by(
+            company_id=current_user.company_id
+        ).filter(
+            MeasureAssignment.deleted_at.is_(None)
+        ).all()
         return render_template("company/dashboard.html", assignments=assignments, now=datetime.utcnow())
     except Exception as e:
         db.session.rollback()

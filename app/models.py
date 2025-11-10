@@ -212,6 +212,10 @@ class MeasureAssignment(TimestampMixin, db.Model):
     end_date = db.Column(db.Date)
     due_at = db.Column(db.DateTime)
     
+    # Soft delete tracking
+    deleted_at = db.Column(db.DateTime, nullable=True)  # When assignment was unassigned/deleted
+    deleted_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)  # Admin who deleted it
+    
     # snapshot of measure meta at assignment time
     target = db.Column(db.Text)
     departments = db.Column(db.String(255))

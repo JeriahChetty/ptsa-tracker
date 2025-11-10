@@ -82,6 +82,7 @@
           <th>Measure</th>
           <th>Status</th>
           <th>Progress</th>
+          <th>Start Date</th>
           <th>Due Date</th>
           <th>Created</th>
           <th>Actions</th>
@@ -89,11 +90,17 @@
       </thead>
       <tbody>
         {% for a in assignments %}
-        <tr>
+        <tr {% if a.deleted_at %}class="table-secondary"{% endif %}>
           <td>{{ a.id }}</td>
           <td>{{ a.company.name if a.company else "N/A" }}</td>
           <td>{{ a.measure.name if a.measure else "N/A" }}</td>
-          <td><span class="badge bg-{{ status_class(a.status) }}">{{ a.status or "Unknown" }}</span></td>
+          <td>
+            {% if a.deleted_at %}
+              <span class="badge bg-danger">Unassigned</span>
+            {% else %}
+              <span class="badge bg-{{ status_class(a.status) }}">{{ a.status or "Unknown" }}</span>
+            {% endif %}
+          </td>
           <td>
             {% if a.steps %}
               {% set completed = a.steps|selectattr('is_completed')|list|length %}
@@ -114,8 +121,30 @@
               <small class="text-muted">No steps</small>
             {% endif %}
           </td>
-          <td>{{ a.due_at.strftime('%Y-%m-%d') if a.due_at else "N/A" }}</td>
-          <td>{{ a.created_at.strftime('%Y-%m-%d') if a.created_at else "N/A" }}</td>
+          <td>
+            {% if a.start_date %}
+              {{ a.start_date.strftime('%Y-%m-%d') }}
+            {% else %}
+              <span class="text-muted">Not set</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set deadline = a.end_date or (a.due_at.date() if a.due_at else None) %}
+            {% if deadline %}
+              {{ deadline.strftime('%Y-%m-%d') }}
+              {% if a.is_overdue and not a.deleted_at %}
+                <span class="badge bg-danger ms-1">Overdue</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">Not set</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ a.created_at.strftime('%Y-%m-%d') if a.created_at else "N/A" }}
+            {% if a.deleted_at %}
+              <br><small class="text-danger">Deleted: {{ a.deleted_at.strftime('%Y-%m-%d') }}</small>
+            {% endif %}
+          </td>
           <td>
             <div class="dropdown">
               <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -123,7 +152,19 @@
               </button>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#">View Details</a></li>
-                <li><a class="dropdown-item" href="#">Edit Assignment</a></li>
+                {% if not a.deleted_at %}
+                  <li><a class="dropdown-item" href="#">Edit Assignment</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form action="{{ url_for('admin.unassign_measure', assignment_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to unassign this measure from {{ a.company.name }}? This will remove it from their dashboard but keep the history.');">
+                      <button type="submit" class="dropdown-item text-danger">
+                        <i class="fas fa-unlink me-1"></i> Unassign Measure
+                      </button>
+                    </form>
+                  </li>
+                {% else %}
+                  <li><span class="dropdown-item text-muted"><i>Already unassigned</i></span></li>
+                {% endif %}
               </ul>
             </div>
           </td>

@@ -485,16 +485,24 @@ def assign_measure():
     try:
         measure_id = request.form.get("measure_id", type=int)
         company_id = request.form.get("company_id", type=int)
-        end_date = request.form.get("end_date")
         urgency = request.form.get("urgency", type=int, default=1)
+        
+        # Get company-specific details from form
+        responsible = request.form.get("responsible", "").strip() or None
+        departments = request.form.get("departments", "").strip() or None
+        participants = request.form.get("participants", "").strip() or None
+        start_date_str = request.form.get("start_date", "").strip()
+        end_date_str = request.form.get("end_date", "").strip()
         
         if not measure_id or not company_id:
             flash("Missing required fields for assignment.", "danger")
             return redirect(url_for("admin.measures"))
         
-        # Check if measure is already assigned to this company
+        # Check if measure is already assigned to this company (excluding soft-deleted)
         existing = MeasureAssignment.query.filter_by(
             measure_id=measure_id, company_id=company_id
+        ).filter(
+            MeasureAssignment.deleted_at.is_(None)
         ).first()
         if existing:
             flash(f"This measure is already assigned to this company.", "warning")
@@ -504,21 +512,55 @@ def assign_measure():
         measure = Measure.query.get_or_404(measure_id)
         company = Company.query.get_or_404(company_id)
         
+        # Parse dates
+        start_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            except Exception:
+                start_date = datetime.now().date()
+        else:
+            start_date = datetime.now().date()
+        
+        end_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            except Exception:
+                end_date = (datetime.now() + timedelta(days=30)).date()
+        else:
+            end_date = (datetime.now() + timedelta(days=30)).date()
+        
         assignment = MeasureAssignment(
             measure_id=measure_id,
             company_id=company_id,
             status="Not Started",
             urgency=urgency,
-            start_date=datetime.now().date(),
-            end_date=datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None,
+            start_date=start_date,
+            end_date=end_date,
+            due_at=datetime.combine(end_date, datetime.max.time()) if end_date else None,
             
-            # Snapshot measure meta
-            target=measure.target,
-            departments=measure.departments,
-            responsible=measure.responsible,
-            participants=measure.participants,
+            # Use company-specific details from form, NOT from measure template
+            target=measure.target,  # Target is measure-specific, not company-specific
+            departments=departments,
+            responsible=responsible,
+            participants=participants,
         )
         db.session.add(assignment)
+        db.session.flush()  # Get assignment ID
+        
+        # Clone steps from measure to assignment
+        from app.models import MeasureStep, AssignmentStep
+        measure_steps = MeasureStep.query.filter_by(measure_id=measure_id).order_by(MeasureStep.step.asc()).all()
+        for idx, step in enumerate(measure_steps):
+            assignment_step = AssignmentStep(
+                assignment_id=assignment.id,
+                title=step.title,
+                step=idx,
+                is_completed=False
+            )
+            db.session.add(assignment_step)
+        
         db.session.commit()
         
         # Log activity
@@ -828,7 +870,12 @@ def send_measure_reminder():
         # Add progress summary if requested
         progress_summary = ""
         if include_progress:
-            assignments = MeasureAssignment.query.filter_by(company_id=company_id).all()
+            # Exclude soft-deleted assignments from progress calculation
+            assignments = MeasureAssignment.query.filter_by(
+                company_id=company_id
+            ).filter(
+                MeasureAssignment.deleted_at.is_(None)
+            ).all()
             total = len(assignments)
             completed = sum(1 for a in assignments if a.status == "Completed")
             in_progress = sum(1 for a in assignments if a.status == "In Progress")
@@ -913,7 +960,12 @@ def api_company_measures(company_id):
         return {"success": False, "error": "Unauthorized"}, 403
     
     try:
-        assignments = MeasureAssignment.query.filter_by(company_id=company_id).all()
+        # Exclude soft-deleted assignments from API
+        assignments = MeasureAssignment.query.filter_by(
+            company_id=company_id
+        ).filter(
+            MeasureAssignment.deleted_at.is_(None)
+        ).all()
         measures = []
         for a in assignments:
             if a.measure:
@@ -1246,6 +1298,45 @@ def save_assignment_details():
         return redirect(url_for("admin.measures"))
 
 
+# ---------------------------------------------------------------------------
+# Unassign Measure (Soft Delete)
+# ---------------------------------------------------------------------------
+@admin_bp.route("/assignments/<int:assignment_id>/unassign", methods=["POST"])
+@login_required
+def unassign_measure(assignment_id):
+    """Soft-delete an assignment by setting deleted_at timestamp."""
+    try:
+        assignment = MeasureAssignment.query.get_or_404(assignment_id)
+        
+        if assignment.deleted_at:
+            flash("This assignment has already been unassigned.", "warning")
+            return redirect(url_for("admin.measure_history"))
+        
+        # Soft delete by setting deleted_at and deleted_by
+        assignment.deleted_at = datetime.utcnow()
+        assignment.deleted_by = current_user.id
+        
+        db.session.commit()
+        
+        flash(
+            f"Successfully unassigned '{assignment.measure.name}' from {assignment.company.name}. "
+            f"The measure remains in history but is removed from their dashboard.",
+            "success"
+        )
+        
+        current_app.logger.info(
+            f"Admin {current_user.email} unassigned assignment {assignment_id} "
+            f"(Measure: {assignment.measure.name}, Company: {assignment.company.name})"
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error unassigning assignment {assignment_id}: {str(e)}")
+        flash(f"Error unassigning measure: {str(e)}", "danger")
+    
+    return redirect(url_for("admin.measure_history"))
+
+
 # --- CRUD for Companies ---
 @admin_bp.route("/companies/<int:company_id>", methods=["GET", "POST"])
 @login_required
@@ -1274,7 +1365,12 @@ def company_profile(company_id):
     # Check if we're in edit mode
     editing = request.args.get('edit', '0') == '1'
     
-    assignments = MeasureAssignment.query.filter_by(company_id=company.id).order_by(MeasureAssignment.order.asc()).all()
+    # Exclude soft-deleted assignments from company profile view
+    assignments = MeasureAssignment.query.filter_by(
+        company_id=company.id
+    ).filter(
+        MeasureAssignment.deleted_at.is_(None)
+    ).order_by(MeasureAssignment.order.asc()).all()
     # Get benchmarking data for this company
     from app.models import CompanyBenchmark
     benchmarks = CompanyBenchmark.query.filter_by(company_id=company.id).order_by(CompanyBenchmark.data_year).all()
