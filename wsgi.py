@@ -133,6 +133,38 @@ with app.app_context():
             logger.error(f"❌ Error backfilling assignment steps: {backfill_steps_error}", exc_info=True)
             db.session.rollback()
         
+        # Clean up company-specific details that were incorrectly copied from other companies
+        # This is a ONE-TIME cleanup for existing assignments created before the fix
+        try:
+            from app.models import MeasureAssignment, Measure, Company
+            
+            # Get all assignments where company-specific fields match the measure template
+            # (indicating they were copied instead of being company-specific)
+            assignments_to_clean = []
+            for assignment in MeasureAssignment.query.all():
+                measure = assignment.measure
+                # If assignment has same responsible/participants/departments as the measure template,
+                # it was likely copied and should be cleared for the company to fill in their own
+                if (assignment.responsible and assignment.responsible == measure.responsible) or \
+                   (assignment.participants and assignment.participants == measure.participants) or \
+                   (assignment.departments and assignment.departments == measure.departments):
+                    assignments_to_clean.append(assignment)
+            
+            if assignments_to_clean:
+                logger.info(f"⚠️  Found {len(assignments_to_clean)} assignments with copied company-specific details, cleaning...")
+                for assignment in assignments_to_clean:
+                    logger.info(f"  - Assignment {assignment.id} (Company: {assignment.company_id}, Measure: {assignment.measure_id})")
+                    assignment.responsible = None
+                    assignment.participants = None
+                    assignment.departments = None
+                db.session.commit()
+                logger.info(f"✓ Successfully cleaned {len(assignments_to_clean)} assignments - admins must now fill in company-specific details")
+            else:
+                logger.info("✓ No assignments found with incorrectly copied company details")
+        except Exception as cleanup_error:
+            logger.error(f"❌ Error cleaning up assignment company details: {cleanup_error}", exc_info=True)
+            db.session.rollback()
+        
         # Create default admin if needed
         from app.models import User
         from werkzeug.security import generate_password_hash
