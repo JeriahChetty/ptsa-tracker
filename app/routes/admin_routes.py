@@ -2658,40 +2658,45 @@ def send_progress_report_now():
     try:
         from datetime import datetime
         from app.utils.sendgrid_helper import send_email_via_sendgrid
+        from app.utils.email_reports import generate_progress_report_html, get_admin_emails, get_additional_report_emails
+        from app.models import SystemSettings
         
-        current_app.logger.info("=== Testing SendGrid HTTP API email send ===")
+        current_app.logger.info("=== Sending Progress Report via SendGrid HTTP API ===")
         
-        # Get current user's email as recipient
-        test_recipient = current_user.email
+        # Get all recipients (admins + additional emails)
+        admin_emails = get_admin_emails()
+        additional_emails = get_additional_report_emails()
+        all_recipients = admin_emails + additional_emails
         
-        # Create simple test email
-        subject = f"PTSA Tracker Test - {datetime.utcnow().strftime('%B %d, %Y')}"
-        html_content = """
-        <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h1 style="color: #667eea;">✅ Test Email Successful!</h1>
-                <p>If you receive this email, SendGrid HTTP API is working correctly!</p>
-                <hr style="margin: 20px 0;">
-                <p style="color: #666; font-size: 12px;">
-                    Sent from PTSA Measure Tracker<br>
-                    Using SendGrid HTTP API
-                </p>
-            </body>
-        </html>
-        """
+        if not all_recipients:
+            flash("❌ No recipients found. Add admin users or additional email addresses.", "danger")
+            return redirect(url_for('admin.system_settings'))
         
-        current_app.logger.info(f"Sending to: {test_recipient}")
+        current_app.logger.info(f"Admin emails: {admin_emails}")
+        current_app.logger.info(f"Additional emails: {additional_emails}")
+        current_app.logger.info(f"Recipients: {len(admin_emails)} admins, {len(additional_emails)} additional")
+        
+        # Generate full progress report HTML
+        html_content = generate_progress_report_html()
+        subject = f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}"
+        
+        current_app.logger.info(f"Sending to: {', '.join(all_recipients)}")
         
         # Send via SendGrid HTTP API (bypasses SMTP/firewall issues)
         send_email_via_sendgrid(
             subject=subject,
-            recipients=[test_recipient],
+            recipients=all_recipients,
             html_content=html_content,
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'info@ptsa.co.za')
         )
         
-        current_app.logger.info("Email sent successfully via SendGrid API!")
-        flash(f"✅ Test email sent to {test_recipient}!", "success")
+        # Update last sent timestamp
+        settings = SystemSettings.get_settings()
+        settings.last_progress_report_sent = datetime.utcnow()
+        db.session.commit()
+        
+        current_app.logger.info("Progress report sent successfully via SendGrid API!")
+        flash(f"✅ Progress report sent to {len(all_recipients)} recipient(s)!", "success")
         
     except Exception as e:
         # Log the full error
