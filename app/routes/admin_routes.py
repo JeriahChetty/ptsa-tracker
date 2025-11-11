@@ -2656,32 +2656,41 @@ def system_settings():
 def send_progress_report_now():
     """Manually trigger progress report email"""
     try:
-        # Test sending a simple email without any database queries
-        from app.extensions import mail
-        from flask_mail import Message as MailMessage
         from datetime import datetime
+        from app.utils.sendgrid_helper import send_email_via_sendgrid
         
-        if mail is None:
-            flash("❌ Flask-Mail is not installed!", "danger")
-            return redirect(url_for('admin.system_settings'))
+        current_app.logger.info("=== Testing SendGrid HTTP API email send ===")
         
-        current_app.logger.info("=== Testing simple email send (no DB queries) ===")
-        
-        # Get current user's email as recipient (avoid DB query for admins)
+        # Get current user's email as recipient
         test_recipient = current_user.email
         
-        # Create simple test message
-        msg = MailMessage(
-            subject=f"PTSA Tracker Test - {datetime.utcnow().strftime('%B %d, %Y')}",
-            recipients=[test_recipient],
-            html="<h1>Test Email</h1><p>If you receive this, email is working!</p>",
-            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
-        )
+        # Create simple test email
+        subject = f"PTSA Tracker Test - {datetime.utcnow().strftime('%B %d, %Y')}"
+        html_content = """
+        <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h1 style="color: #667eea;">✅ Test Email Successful!</h1>
+                <p>If you receive this email, SendGrid HTTP API is working correctly!</p>
+                <hr style="margin: 20px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    Sent from PTSA Measure Tracker<br>
+                    Using SendGrid HTTP API
+                </p>
+            </body>
+        </html>
+        """
         
         current_app.logger.info(f"Sending to: {test_recipient}")
-        mail.send(msg)
-        current_app.logger.info("Email sent successfully!")
         
+        # Send via SendGrid HTTP API (bypasses SMTP/firewall issues)
+        send_email_via_sendgrid(
+            subject=subject,
+            recipients=[test_recipient],
+            html_content=html_content,
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'info@ptsa.co.za')
+        )
+        
+        current_app.logger.info("Email sent successfully via SendGrid API!")
         flash(f"✅ Test email sent to {test_recipient}!", "success")
         
     except Exception as e:
@@ -2692,12 +2701,12 @@ def send_progress_report_now():
         
         # Show error to user
         error_msg = str(e)
-        if "SMTP" in error_msg or "TLS" in error_msg or "SSL" in error_msg or "Connection" in error_msg:
-            flash(f"❌ Email Server Error: {error_msg}", "danger")
-            flash("💡 Check: MAIL_SERVER=mail.ptsa.co.za, MAIL_PORT=587, MAIL_USE_TLS=true", "warning")
-        elif "auth" in error_msg.lower() or "login" in error_msg.lower():
-            flash(f"❌ Authentication Error: {error_msg}", "danger")
-            flash("💡 Check MAIL_USERNAME and MAIL_PASSWORD are correct", "warning")
+        if "SENDGRID_API_KEY not configured" in error_msg:
+            flash(f"❌ SendGrid API Key Missing!", "danger")
+            flash("💡 Add SENDGRID_API_KEY to Render environment variables", "warning")
+        elif "unauthorized" in error_msg.lower() or "forbidden" in error_msg.lower():
+            flash(f"❌ SendGrid Authentication Error", "danger")
+            flash("💡 Check your SendGrid API key has 'Mail Send' permission", "warning")
         else:
             flash(f"❌ Error: {error_msg}", "danger")
     
