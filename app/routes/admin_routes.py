@@ -2661,6 +2661,7 @@ def send_progress_report_now():
         from app.utils.email_reports import generate_progress_report_html, get_admin_emails, get_additional_report_emails
         from app.models import SystemSettings
         
+        print("=== Sending Progress Report via SendGrid HTTP API ===", flush=True)
         current_app.logger.info("=== Sending Progress Report via SendGrid HTTP API ===")
         
         # Get all recipients (admins + additional emails)
@@ -2668,10 +2669,14 @@ def send_progress_report_now():
         additional_emails = get_additional_report_emails()
         all_recipients = admin_emails + additional_emails
         
+        print(f"Admin emails: {admin_emails}", flush=True)
+        print(f"Additional emails: {additional_emails}", flush=True)
+        
         if not all_recipients:
             flash("❌ No recipients found. Add admin users or additional email addresses.", "danger")
             return redirect(url_for('admin.system_settings'))
         
+        print(f"Recipients: {len(admin_emails)} admins, {len(additional_emails)} additional", flush=True)
         current_app.logger.info(f"Admin emails: {admin_emails}")
         current_app.logger.info(f"Additional emails: {additional_emails}")
         current_app.logger.info(f"Recipients: {len(admin_emails)} admins, {len(additional_emails)} additional")
@@ -2680,28 +2685,34 @@ def send_progress_report_now():
         html_content = generate_progress_report_html()
         subject = f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}"
         
+        print(f"Sending to: {', '.join(all_recipients)}", flush=True)
         current_app.logger.info(f"Sending to: {', '.join(all_recipients)}")
         
         # Send via SendGrid HTTP API (bypasses SMTP/firewall issues)
+        print("Calling send_email_via_sendgrid...", flush=True)
         send_email_via_sendgrid(
             subject=subject,
             recipients=all_recipients,
             html_content=html_content,
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'info@ptsa.co.za')
         )
+        print("SendGrid call completed successfully!", flush=True)
         
         # Update last sent timestamp
         settings = SystemSettings.get_settings()
         settings.last_progress_report_sent = datetime.utcnow()
         db.session.commit()
         
+        print("Progress report sent successfully via SendGrid API!", flush=True)
         current_app.logger.info("Progress report sent successfully via SendGrid API!")
         flash(f"✅ Progress report sent to {len(all_recipients)} recipient(s)!", "success")
         
     except Exception as e:
         # Log the full error
+        print(f"ERROR: {str(e)}", flush=True)
         current_app.logger.error(f"Email error: {str(e)}")
         import traceback
+        print(traceback.format_exc(), flush=True)
         current_app.logger.error(traceback.format_exc())
         
         # Show error to user
