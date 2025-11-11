@@ -38,6 +38,9 @@ def create_app(config_name="production"):
     # Initialize Flask-Mail if configured
     if mail:
         mail.init_app(app)
+        # Set socket timeout for SMTP to prevent worker timeouts
+        import socket
+        socket.setdefaulttimeout(30)  # 30 second timeout for all sockets
     
     # Configure login manager
     login_manager.login_view = 'auth.login'
