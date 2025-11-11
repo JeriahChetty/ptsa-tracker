@@ -27,11 +27,14 @@ def upgrade():
     if '_alembic_tmp_assignment_steps' in inspector.get_table_names():
         op.drop_table('_alembic_tmp_assignment_steps')
     
-    # Get column names for each table
-    assignment_steps_cols = [c['name'] for c in inspector.get_columns('assignment_steps')]
-    measure_assignments_cols = [c['name'] for c in inspector.get_columns('measure_assignments')]
-    measure_steps_cols = [c['name'] for c in inspector.get_columns('measure_steps')]
-    measures_cols = [c['name'] for c in inspector.get_columns('measures')]
+    # Get table names
+    table_names = inspector.get_table_names()
+    
+    # Get column names for each table (only if table exists)
+    assignment_steps_cols = [c['name'] for c in inspector.get_columns('assignment_steps')] if 'assignment_steps' in table_names else []
+    measure_assignments_cols = [c['name'] for c in inspector.get_columns('measure_assignments')] if 'measure_assignments' in table_names else []
+    measure_steps_cols = [c['name'] for c in inspector.get_columns('measure_steps')] if 'measure_steps' in table_names else []
+    measures_cols = [c['name'] for c in inspector.get_columns('measures')] if 'measures' in table_names else []
     
     # assignment_steps: add step column if it doesn't exist
     if 'step' not in assignment_steps_cols and 'order_index' in assignment_steps_cols:
@@ -42,31 +45,32 @@ def upgrade():
             batch_op.alter_column('step', nullable=False)
             batch_op.drop_column('order_index')
     
-    # measure_assignments: add date columns if they don't exist
-    with op.batch_alter_table('measure_assignments', schema=None) as batch_op:
-        if 'start_date' not in measure_assignments_cols:
-            batch_op.add_column(sa.Column('start_date', sa.Date(), nullable=True))
-        if 'end_date' not in measure_assignments_cols:
-            batch_op.add_column(sa.Column('end_date', sa.Date(), nullable=True))
-        # Drop old columns and indexes only if they exist
-        try:
-            if 'urgency' in measure_assignments_cols:
-                batch_op.drop_column('urgency')
-        except:
-            pass
-        try:
-            if 'timeframe_date' in measure_assignments_cols:
-                batch_op.drop_column('timeframe_date')
-        except:
-            pass
-        try:
-            if 'duration_days' in measure_assignments_cols:
-                batch_op.drop_column('duration_days')
-        except:
-            pass
+    # measure_assignments: add date columns if they don't exist (only if table exists)
+    if 'measure_assignments' in table_names:
+        with op.batch_alter_table('measure_assignments', schema=None) as batch_op:
+            if 'start_date' not in measure_assignments_cols:
+                batch_op.add_column(sa.Column('start_date', sa.Date(), nullable=True))
+            if 'end_date' not in measure_assignments_cols:
+                batch_op.add_column(sa.Column('end_date', sa.Date(), nullable=True))
+            # Drop old columns and indexes only if they exist
+            try:
+                if 'urgency' in measure_assignments_cols:
+                    batch_op.drop_column('urgency')
+            except:
+                pass
+            try:
+                if 'timeframe_date' in measure_assignments_cols:
+                    batch_op.drop_column('timeframe_date')
+            except:
+                pass
+            try:
+                if 'duration_days' in measure_assignments_cols:
+                    batch_op.drop_column('duration_days')
+            except:
+                pass
     
-    # measure_steps: add step column if it doesn't exist
-    if 'step' not in measure_steps_cols and 'order_index' in measure_steps_cols:
+    # measure_steps: add step column if it doesn't exist (only if table exists)
+    if 'measure_steps' in table_names and 'step' not in measure_steps_cols and 'order_index' in measure_steps_cols:
         with op.batch_alter_table('measure_steps', schema=None) as batch_op:
             batch_op.add_column(sa.Column('step', sa.Integer(), nullable=True))
         op.execute("UPDATE measure_steps SET step = order_index WHERE step IS NULL")
@@ -74,35 +78,36 @@ def upgrade():
             batch_op.alter_column('step', nullable=False)
             batch_op.drop_column('order_index')
     
-    # measures: add new columns and drop old ones
-    with op.batch_alter_table('measures', schema=None) as batch_op:
-        if 'measure_detail' not in measures_cols:
-            batch_op.add_column(sa.Column('measure_detail', sa.Text(), nullable=True))
-        if 'start_date' not in measures_cols:
-            batch_op.add_column(sa.Column('start_date', sa.Date(), nullable=True))
-        if 'end_date' not in measures_cols:
-            batch_op.add_column(sa.Column('end_date', sa.Date(), nullable=True))
-        # Drop old columns only if they exist
-        try:
-            if 'default_timeframe_date' in measures_cols:
-                batch_op.drop_column('default_timeframe_date')
-        except:
-            pass
-        try:
-            if 'default_duration_days' in measures_cols:
-                batch_op.drop_column('default_duration_days')
-        except:
-            pass
-        try:
-            if 'default_urgency' in measures_cols:
-                batch_op.drop_column('default_urgency')
-        except:
-            pass
-        try:
-            if 'description' in measures_cols:
-                batch_op.drop_column('description')
-        except:
-            pass
+    # measures: add new columns and drop old ones (only if table exists)
+    if 'measures' in table_names:
+        with op.batch_alter_table('measures', schema=None) as batch_op:
+            if 'measure_detail' not in measures_cols:
+                batch_op.add_column(sa.Column('measure_detail', sa.Text(), nullable=True))
+            if 'start_date' not in measures_cols:
+                batch_op.add_column(sa.Column('start_date', sa.Date(), nullable=True))
+            if 'end_date' not in measures_cols:
+                batch_op.add_column(sa.Column('end_date', sa.Date(), nullable=True))
+            # Drop old columns only if they exist
+            try:
+                if 'default_timeframe_date' in measures_cols:
+                    batch_op.drop_column('default_timeframe_date')
+            except:
+                pass
+            try:
+                if 'default_duration_days' in measures_cols:
+                    batch_op.drop_column('default_duration_days')
+            except:
+                pass
+            try:
+                if 'default_urgency' in measures_cols:
+                    batch_op.drop_column('default_urgency')
+            except:
+                pass
+            try:
+                if 'description' in measures_cols:
+                    batch_op.drop_column('description')
+            except:
+                pass
 
     # ### end Alembic commands ###
 

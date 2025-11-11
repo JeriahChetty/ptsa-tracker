@@ -24,10 +24,13 @@ def upgrade():
     if 'system_settings' in inspector.get_table_names():
         columns = [col['name'] for col in inspector.get_columns('system_settings')]
         
+        # Use appropriate boolean default (1 for SQLite, true for PostgreSQL)
+        bool_default = '1' if conn.dialect.name == 'sqlite' else 'true'
+        
         # Add reminder_email_enabled if not exists
         if 'reminder_email_enabled' not in columns:
             op.add_column('system_settings', 
-                sa.Column('reminder_email_enabled', sa.Boolean(), nullable=False, server_default='true'))
+                sa.Column('reminder_email_enabled', sa.Boolean(), nullable=False, server_default=bool_default))
         
         # Add reminder_days_before if not exists
         if 'reminder_days_before' not in columns:

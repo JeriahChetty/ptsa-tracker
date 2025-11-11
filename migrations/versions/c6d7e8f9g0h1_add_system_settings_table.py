@@ -22,30 +22,47 @@ def upgrade():
     
     # Check if table already exists
     if 'system_settings' not in inspector.get_table_names():
+        # Detect database type
+        is_sqlite = conn.dialect.name == 'sqlite'
+        
+        # Use appropriate default for timestamps
+        timestamp_default = sa.text('CURRENT_TIMESTAMP') if is_sqlite else sa.text('now()')
+        
         op.create_table('system_settings',
             sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('progress_report_enabled', sa.Boolean(), nullable=False, server_default='true'),
+            sa.Column('progress_report_enabled', sa.Boolean(), nullable=False, server_default='1'),
             sa.Column('progress_report_frequency', sa.String(length=32), nullable=False, server_default='weekly'),
             sa.Column('progress_report_day', sa.Integer(), nullable=True, server_default='1'),
             sa.Column('progress_report_hour', sa.Integer(), nullable=True, server_default='8'),
             sa.Column('progress_report_additional_emails', sa.Text(), nullable=True),
-            sa.Column('assistance_email_enabled', sa.Boolean(), nullable=False, server_default='true'),
-            sa.Column('assistance_email_immediate', sa.Boolean(), nullable=False, server_default='true'),
+            sa.Column('assistance_email_enabled', sa.Boolean(), nullable=False, server_default='1'),
+            sa.Column('assistance_email_immediate', sa.Boolean(), nullable=False, server_default='1'),
             sa.Column('last_progress_report_sent', sa.DateTime(), nullable=True),
-            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=timestamp_default),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=timestamp_default),
             sa.PrimaryKeyConstraint('id')
         )
         
-        # Insert default settings row
-        op.execute("""
-            INSERT INTO system_settings (id, progress_report_enabled, progress_report_frequency, 
-                                         progress_report_day, progress_report_hour, 
-                                         assistance_email_enabled, assistance_email_immediate,
-                                         created_at, updated_at)
-            VALUES (1, true, 'weekly', 1, 8, true, true, now(), now())
-            ON CONFLICT (id) DO NOTHING
-        """)
+        # Insert default settings row - use appropriate syntax for each DB
+        if is_sqlite:
+            op.execute("""
+                INSERT OR IGNORE INTO system_settings 
+                (id, progress_report_enabled, progress_report_frequency, 
+                 progress_report_day, progress_report_hour, 
+                 assistance_email_enabled, assistance_email_immediate,
+                 created_at, updated_at)
+                VALUES (1, 1, 'weekly', 1, 8, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """)
+        else:
+            op.execute("""
+                INSERT INTO system_settings 
+                (id, progress_report_enabled, progress_report_frequency, 
+                 progress_report_day, progress_report_hour, 
+                 assistance_email_enabled, assistance_email_immediate,
+                 created_at, updated_at)
+                VALUES (1, true, 'weekly', 1, 8, true, true, now(), now())
+                ON CONFLICT (id) DO NOTHING
+            """)
 
 
 def downgrade():
