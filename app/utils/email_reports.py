@@ -258,8 +258,32 @@ def send_progress_report():
         if not all_recipients:
             raise Exception("No recipients found. Add admin users or additional email addresses.")
         
-        # Generate report content
-        html_content = generate_progress_report_html()
+        # Generate SIMPLE report content (temporarily simplified to avoid crashes)
+        html_content = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
+        .header { background: #667eea; color: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PTSA Tracker Progress Report</h1>
+        <p>""" + datetime.utcnow().strftime('%B %d, %Y') + """</p>
+    </div>
+    <div class="content">
+        <h2>Test Report</h2>
+        <p>This is a simplified test report to verify email sending functionality.</p>
+        <p>If you receive this email, the email system is working correctly.</p>
+        <p>Full reports with statistics will be enabled once email sending is confirmed working.</p>
+    </div>
+</body>
+</html>
+"""
         
         msg = MailMessage(
             subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
