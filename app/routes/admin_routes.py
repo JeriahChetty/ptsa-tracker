@@ -2656,13 +2656,31 @@ def system_settings():
 def send_progress_report_now():
     """Manually trigger progress report email"""
     try:
-        # Import inside try block to catch any import errors
+        # First, let's test if mail is even available
+        from app.extensions import mail
+        
+        if mail is None:
+            flash("❌ Flask-Mail is not installed or configured!", "danger")
+            flash("💡 The mail extension is None. Check that Flask-Mail is installed.", "warning")
+            return redirect(url_for('admin.system_settings'))
+        
+        # Test if mail has the send method
+        if not hasattr(mail, 'send'):
+            flash("❌ Mail object doesn't have send method!", "danger")
+            return redirect(url_for('admin.system_settings'))
+        
+        # Now try to import and call the function
         from app.utils.email_reports import send_progress_report
         
         # Call the function - it will raise an exception if it fails
         send_progress_report()
         
         flash("✅ Progress report sent successfully!", "success")
+        
+    except ImportError as ie:
+        flash(f"❌ Import Error: {str(ie)}", "danger")
+        flash("💡 Check that all required modules are installed", "warning")
+        current_app.logger.error(f"Import error: {str(ie)}")
         
     except Exception as e:
         # Log the full error for debugging
