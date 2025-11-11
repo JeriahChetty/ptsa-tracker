@@ -2656,45 +2656,48 @@ def system_settings():
 def send_progress_report_now():
     """Manually trigger progress report email"""
     try:
-        # First, let's test if mail is even available
+        # Test sending a simple email without any database queries
         from app.extensions import mail
+        from flask_mail import Message as MailMessage
+        from datetime import datetime
         
         if mail is None:
-            flash("❌ Flask-Mail is not installed or configured!", "danger")
-            flash("💡 The mail extension is None. Check that Flask-Mail is installed.", "warning")
+            flash("❌ Flask-Mail is not installed!", "danger")
             return redirect(url_for('admin.system_settings'))
         
-        # Test if mail has the send method
-        if not hasattr(mail, 'send'):
-            flash("❌ Mail object doesn't have send method!", "danger")
-            return redirect(url_for('admin.system_settings'))
+        current_app.logger.info("=== Testing simple email send (no DB queries) ===")
         
-        # Now try to import and call the function
-        from app.utils.email_reports import send_progress_report
+        # Get current user's email as recipient (avoid DB query for admins)
+        test_recipient = current_user.email
         
-        # Call the function - it will raise an exception if it fails
-        send_progress_report()
+        # Create simple test message
+        msg = MailMessage(
+            subject=f"PTSA Tracker Test - {datetime.utcnow().strftime('%B %d, %Y')}",
+            recipients=[test_recipient],
+            html="<h1>Test Email</h1><p>If you receive this, email is working!</p>",
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
+        )
         
-        flash("✅ Progress report sent successfully!", "success")
+        current_app.logger.info(f"Sending to: {test_recipient}")
+        mail.send(msg)
+        current_app.logger.info("Email sent successfully!")
         
-    except ImportError as ie:
-        flash(f"❌ Import Error: {str(ie)}", "danger")
-        flash("💡 Check that all required modules are installed", "warning")
-        current_app.logger.error(f"Import error: {str(ie)}")
+        flash(f"✅ Test email sent to {test_recipient}!", "success")
         
     except Exception as e:
-        # Log the full error for debugging
-        current_app.logger.error(f"Progress report error: {str(e)}")
+        # Log the full error
+        current_app.logger.error(f"Email error: {str(e)}")
         import traceback
         current_app.logger.error(traceback.format_exc())
         
-        # Show user-friendly error message
+        # Show error to user
         error_msg = str(e)
-        if "SMTP" in error_msg or "TLS" in error_msg or "SSL" in error_msg:
+        if "SMTP" in error_msg or "TLS" in error_msg or "SSL" in error_msg or "Connection" in error_msg:
             flash(f"❌ Email Server Error: {error_msg}", "danger")
-            flash("💡 Tip: Check MAIL_USE_TLS=true and MAIL_PORT=587 in environment", "warning")
-        elif "not configured" in error_msg.lower() or "MAIL_" in error_msg:
-            flash(f"❌ Configuration Error: {error_msg}", "danger")
+            flash("💡 Check: MAIL_SERVER=mail.ptsa.co.za, MAIL_PORT=587, MAIL_USE_TLS=true", "warning")
+        elif "auth" in error_msg.lower() or "login" in error_msg.lower():
+            flash(f"❌ Authentication Error: {error_msg}", "danger")
+            flash("💡 Check MAIL_USERNAME and MAIL_PASSWORD are correct", "warning")
         else:
             flash(f"❌ Error: {error_msg}", "danger")
     
