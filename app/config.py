@@ -33,9 +33,12 @@ class Config:
     MAIL_TIMEOUT = 30  # 30 second timeout to prevent Gunicorn worker timeout
 
     # Database configuration with PostgreSQL support for production
-    if os.environ.get('DATABASE_URL'):
+    database_url_raw = os.environ.get('DATABASE_URL')
+    print(f"🔍 DATABASE_URL from environment: {database_url_raw}")
+    
+    if database_url_raw:
         # Production database (PostgreSQL on Render)
-        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+        SQLALCHEMY_DATABASE_URI = database_url_raw.replace('postgres://', 'postgresql://')
         print(f"🔗 Using PostgreSQL database: {SQLALCHEMY_DATABASE_URI}")
     else:
         # Development database (SQLite)
