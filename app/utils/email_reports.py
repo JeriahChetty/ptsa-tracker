@@ -285,6 +285,7 @@ def send_progress_report():
 </html>
 """
         
+        current_app.logger.info("Creating email message...")
         msg = MailMessage(
             subject=f"PTSA Tracker Progress Report - {datetime.utcnow().strftime('%B %d, %Y')}",
             recipients=all_recipients,
@@ -292,8 +293,10 @@ def send_progress_report():
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@ptsa-tracker.com')
         )
         
-        # This will raise an exception if it fails
+        current_app.logger.info(f"Attempting to send email to {len(all_recipients)} recipients...")
+        # This will raise an exception if it fails (timeout, auth error, etc.)
         mail.send(msg)
+        current_app.logger.info("Email sent successfully!")
         
         # Update last sent timestamp
         settings.last_progress_report_sent = datetime.utcnow()
