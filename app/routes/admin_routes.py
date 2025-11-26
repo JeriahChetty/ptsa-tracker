@@ -420,7 +420,7 @@ def proceed_to_measures(company_id: int):
 @admin_bp.route("/measures", methods=["GET"])
 @login_required
 def measures():
-    measures = Measure.query.order_by(Measure.name.asc()).all()
+    measures = Measure.query.options(joinedload(Measure.steps)).order_by(Measure.name.asc()).all()
     companies = Company.query.order_by(Company.name.asc()).all()
     return render_template("admin/measures.html", measures=measures, companies=companies)
 
