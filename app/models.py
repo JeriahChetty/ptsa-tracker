@@ -147,14 +147,7 @@ class Measure(TimestampMixin, db.Model):
     measure_detail = db.Column(db.Text)  # renamed from description
 
     target = db.Column(db.Text)
-    departments = db.Column(db.String(255))
-    responsible = db.Column(db.String(255))
-    participants = db.Column(db.String(255))
-
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-
-    order = db.Column(db.Integer, default=0)  # Add this line
+    order = db.Column(db.Integer, default=0)
 
     # Ensure cascades are properly set
     assignments = db.relationship(

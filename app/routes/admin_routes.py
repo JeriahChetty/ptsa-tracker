@@ -432,11 +432,6 @@ def create_measure():
         name = request.form.get("name", "").strip()
         measure_detail = request.form.get("measure_detail", "").strip()
         target = request.form.get("target", "").strip()
-        departments = request.form.get("departments", "").strip()
-        responsible = request.form.get("responsible", "").strip()
-        participants = request.form.get("participants", "").strip()
-        start_date = request.form.get("start_date")
-        end_date = request.form.get("end_date")
 
         if not name:
             flash("Measure name is required.", "warning")
@@ -446,11 +441,6 @@ def create_measure():
             name=name,
             measure_detail=measure_detail or None,
             target=target or None,
-            departments=departments or None,
-            responsible=responsible or None,
-            participants=participants or None,
-            start_date=datetime.fromisoformat(start_date).date() if start_date else None,
-            end_date=datetime.fromisoformat(end_date).date() if end_date else None,
         )
         db.session.add(m)
         db.session.flush()
@@ -475,8 +465,6 @@ def create_measure():
         # Log activity
         from app.utils.activity_logger import log_create
         log_create('measure', m.id, m.name, {
-            'departments': departments,
-            'responsible': responsible,
             'steps_count': len(step_titles) if step_titles else 0
         })
         
@@ -1433,18 +1421,6 @@ def edit_measure(measure_id):
             measure.name = request.form.get("name", "").strip() or measure.name
             measure.measure_detail = request.form.get("measure_detail", "").strip() or None
             measure.target = request.form.get("target", "").strip() or None
-            measure.departments = request.form.get("departments", "").strip() or None
-            measure.responsible = request.form.get("responsible", "").strip() or None
-            measure.participants = request.form.get("participants", "").strip() or None
-            
-            # Update date fields
-            start_date_str = request.form.get("start_date", "").strip()
-            if start_date_str:
-                measure.start_date = datetime.fromisoformat(start_date_str).date()
-            
-            end_date_str = request.form.get("end_date", "").strip()
-            if end_date_str:
-                measure.end_date = datetime.fromisoformat(end_date_str).date()
             
             # Handle steps: get arrays from form
             step_ids = request.form.getlist("step_ids[]")

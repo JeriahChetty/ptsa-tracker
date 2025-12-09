@@ -117,48 +117,6 @@
         <input type="text" class="form-control" id="target" name="target" value="{{ measure.target or '' }}" placeholder="e.g., Reduce waste by 30%">
       </div>
       
-      <div class="col-md-6">
-        <label for="departments" class="form-label">Departments Involved</label>
-        <input type="text" class="form-control" id="departments" name="departments" value="{{ measure.departments or '' }}" placeholder="e.g., Production, Quality, Maintenance">
-      </div>
-    </div>
-  </div>
-
-  <!-- Responsibility & Participation -->
-  <div class="form-section">
-    <h5 class="section-title">
-      <i class="fas fa-users me-2"></i>Responsibility & Participation
-    </h5>
-    
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label for="responsible" class="form-label">Responsible Person/Role</label>
-        <input type="text" class="form-control" id="responsible" name="responsible" value="{{ measure.responsible or '' }}" placeholder="e.g., Production Manager">
-      </div>
-      
-      <div class="col-md-6">
-        <label for="participants" class="form-label">Participants</label>
-        <input type="text" class="form-control" id="participants" name="participants" value="{{ measure.participants or '' }}" placeholder="e.g., Shop floor team, Engineers">
-      </div>
-    </div>
-  </div>
-
-  <!-- Timeline -->
-  <div class="form-section">
-    <h5 class="section-title">
-      <i class="fas fa-calendar me-2"></i>Timeline
-    </h5>
-    
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label for="start_date" class="form-label">Start Date</label>
-        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ measure.start_date.strftime('%Y-%m-%d') if measure.start_date else '' }}">
-      </div>
-      
-      <div class="col-md-6">
-        <label for="end_date" class="form-label">End Date</label>
-        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ measure.end_date.strftime('%Y-%m-%d') if measure.end_date else '' }}">
-      </div>
     </div>
   </div>
 
